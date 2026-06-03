@@ -37,8 +37,8 @@ class BookingApi {
       '/api/time-slots',
       query: {
         'status': 'true',
-        if (reserveDate != null) 'reserveDate': reserveDate,
-        if (roomId != null) 'roomId': '$roomId',
+        'reserveDate': ?reserveDate,
+        'roomId': ?roomId?.toString(),
       },
     );
     final slots = _list(data, TimeSlot.fromJson);

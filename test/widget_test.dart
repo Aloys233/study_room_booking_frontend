@@ -1,10 +1,16 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:study_room_booking_frontend/main.dart';
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   testWidgets('shows authentication entry', (WidgetTester tester) async {
     await tester.pumpWidget(const StudyRoomBookingApp());
+    await tester.pump();
 
     expect(find.text('账号登录'), findsOneWidget);
     expect(find.text('注册'), findsOneWidget);

@@ -6,21 +6,85 @@ import 'screens/email_verification_page.dart';
 import 'screens/home_page.dart';
 import 'screens/password_reset_page.dart';
 import 'services/auth_api.dart';
+import 'services/auth_session_store.dart';
 
 void main() {
   runApp(const StudyRoomBookingApp());
 }
 
+typedef AuthApiFactory = AuthApi Function({String? accessToken});
+
+AuthApi _defaultAuthApiFactory({String? accessToken}) {
+  return AuthApi(accessToken: accessToken);
+}
+
 class StudyRoomBookingApp extends StatefulWidget {
-  const StudyRoomBookingApp({super.key});
+  const StudyRoomBookingApp({
+    super.key,
+    AuthApiFactory authApiFactory = _defaultAuthApiFactory,
+    AuthSessionStore? sessionStore,
+  }) : _authApiFactory = authApiFactory,
+       _sessionStore = sessionStore;
+
+  final AuthApiFactory _authApiFactory;
+  final AuthSessionStore? _sessionStore;
 
   @override
   State<StudyRoomBookingApp> createState() => _StudyRoomBookingAppState();
 }
 
 class _StudyRoomBookingAppState extends State<StudyRoomBookingApp> {
-  final AuthApi _authApi = AuthApi();
+  late final AuthApi _authApi = widget._authApiFactory();
+  late final AuthSessionStore _sessionStore =
+      widget._sessionStore ?? AuthSessionStore();
   LoginSession? _session;
+  bool _restoringSession = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreSession();
+  }
+
+  Future<void> _restoreSession() async {
+    try {
+      final storedSession = await _sessionStore.loadSession();
+      if (storedSession == null) {
+        if (mounted) setState(() => _restoringSession = false);
+        return;
+      }
+
+      final authApi = widget._authApiFactory(
+        accessToken: storedSession.accessToken,
+      );
+      final user = await authApi.getCurrentUser();
+      if (!mounted) return;
+      setState(() {
+        _session = LoginSession(
+          accessToken: storedSession.accessToken,
+          user: user,
+        );
+        _restoringSession = false;
+      });
+    } catch (_) {
+      await _sessionStore.clearSession();
+      if (mounted) {
+        setState(() {
+          _session = null;
+          _restoringSession = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _setSession(LoginSession? session) async {
+    setState(() => _session = session);
+    if (session == null) {
+      await _sessionStore.clearSession();
+    } else {
+      await _sessionStore.saveSession(session);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,22 +142,24 @@ class _StudyRoomBookingAppState extends State<StudyRoomBookingApp> {
           ? EmailVerificationPage(
               authApi: _authApi,
               token: verificationToken,
-              onBackToLogin: () => setState(() => _session = null),
+              onBackToLogin: () => _setSession(null),
             )
           : passwordResetToken != null
           ? PasswordResetPage(
               authApi: _authApi,
               token: passwordResetToken,
-              onBackToLogin: () => setState(() => _session = null),
+              onBackToLogin: () => _setSession(null),
             )
+          : _restoringSession
+          ? const _SessionRestorePage()
           : _session == null
           ? AuthPage(
               authApi: _authApi,
-              onAuthenticated: (session) => setState(() => _session = session),
+              onAuthenticated: _setSession,
             )
           : HomePage(
               session: _session!,
-              onLogout: () => setState(() => _session = null),
+              onLogout: () => _setSession(null),
             ),
     );
   }
@@ -128,5 +194,16 @@ class _StudyRoomBookingAppState extends State<StudyRoomBookingApp> {
       }
     }
     return null;
+  }
+}
+
+class _SessionRestorePage extends StatelessWidget {
+  const _SessionRestorePage();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
+    );
   }
 }

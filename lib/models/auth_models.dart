@@ -37,6 +37,21 @@ class UserProfile {
       avatar: json['avatar'] as String?,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'loginName': loginName,
+      'userNo': userNo,
+      'username': username,
+      'realName': realName,
+      'email': email,
+      'activated': activated,
+      'role': role,
+      'status': status,
+      'avatar': avatar,
+    };
+  }
 }
 
 class LoginSession {
@@ -50,5 +65,9 @@ class LoginSession {
       accessToken: json['accessToken'] as String,
       user: UserProfile.fromJson(json['user'] as Map<String, dynamic>),
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'accessToken': accessToken, 'user': user.toJson()};
   }
 }
