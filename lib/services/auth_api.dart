@@ -100,6 +100,22 @@ class AuthApi {
     await _put('/api/auth/me/profile', body: body);
   }
 
+  Future<String> uploadFile({
+    required List<int> bytes,
+    required String filename,
+  }) async {
+    final request =
+        http.MultipartRequest('POST', _baseUrl.resolve('/api/upload'))
+          ..headers.addAll(_authHeaders())
+          ..files.add(
+            http.MultipartFile.fromBytes('file', bytes, filename: filename),
+          );
+
+    final streamed = await _client.send(request);
+    final response = await http.Response.fromStream(streamed);
+    return _handleResponse(response, const {200}) as String;
+  }
+
   Future<void> bindEmail({required String email}) async {
     await _put('/api/auth/me/email', body: {'email': email});
   }
@@ -166,6 +182,12 @@ class AuthApi {
     return {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
+      ..._authHeaders(),
+    };
+  }
+
+  Map<String, String> _authHeaders() {
+    return {
       if (_accessToken != null && _accessToken.isNotEmpty)
         'Authorization': 'Bearer $_accessToken',
     };

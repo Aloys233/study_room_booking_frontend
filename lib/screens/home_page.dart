@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/auth_models.dart';
 import '../models/booking_models.dart';
+import '../services/avatar_file_picker.dart';
 import '../services/auth_api.dart';
 import '../services/booking_api.dart';
 
@@ -22,7 +23,6 @@ class _HomePageState extends State<HomePage> {
   late final BookingApi _bookingApi;
   final _roomReservationFormKey = GlobalKey<FormState>();
   final _profileFormKey = GlobalKey<FormState>();
-  final _avatarController = TextEditingController();
   final _emailController = TextEditingController();
   final _emailActivationController = TextEditingController();
   final _profilePasswordController = TextEditingController();
@@ -48,6 +48,7 @@ class _HomePageState extends State<HomePage> {
   bool _loading = true;
   bool _loadingSeats = false;
   bool _submitting = false;
+  bool _uploadingAvatar = false;
   bool _emailDialogOpen = false;
   bool _loggingOut = false;
   _HomeSection _selectedSection = _HomeSection.booking;
@@ -85,14 +86,12 @@ class _HomePageState extends State<HomePage> {
     _authApi = AuthApi(accessToken: widget.session.accessToken);
     _bookingApi = BookingApi(accessToken: widget.session.accessToken);
     _currentUser = widget.session.user;
-    _avatarController.text = widget.session.user.avatar ?? '';
     _emailController.text = widget.session.user.email ?? '';
     _loadInitialData();
   }
 
   @override
   void dispose() {
-    _avatarController.dispose();
     _emailController.dispose();
     _emailActivationController.dispose();
     _profilePasswordController.dispose();
@@ -122,7 +121,6 @@ class _HomePageState extends State<HomePage> {
       final loadedTimeSlots = results[2] as List<TimeSlot>;
       setState(() {
         _currentUser = loadedUser;
-        _avatarController.text = loadedUser.avatar ?? '';
         _emailController.text = loadedUser.email ?? '';
         _rooms = results[1] as List<StudyRoom>;
         _timeSlots = loadedTimeSlots;
@@ -389,18 +387,15 @@ class _HomePageState extends State<HomePage> {
     if (!_profileFormKey.currentState!.validate()) {
       return;
     }
-    final avatar = _avatarController.text.trim();
     final password = _profilePasswordController.text;
     await _runAction(() async {
       await _authApi.updateProfile(
-        avatar: avatar.isEmpty ? null : avatar,
         password: password.isEmpty ? null : password,
       );
       final user = await _authApi.getCurrentUser();
       if (!mounted) return;
       setState(() {
         _currentUser = user;
-        _avatarController.text = user.avatar ?? '';
         _emailController.text = user.email ?? '';
         _profilePasswordController.clear();
         _profileConfirmPasswordController.clear();
@@ -408,6 +403,40 @@ class _HomePageState extends State<HomePage> {
       _scheduleEmailActivationDialog();
       _showMessage('个人信息已更新');
     });
+  }
+
+  Future<void> _changeAvatar() async {
+    if (_submitting || _uploadingAvatar) {
+      return;
+    }
+    setState(() => _uploadingAvatar = true);
+    try {
+      final file = await pickAvatarFile();
+      if (file == null) {
+        return;
+      }
+      final avatarUrl = await _authApi.uploadFile(
+        bytes: file.bytes,
+        filename: file.filename,
+      );
+      await _authApi.updateProfile(avatar: avatarUrl);
+      final user = await _authApi.getCurrentUser();
+      if (!mounted) return;
+      setState(() {
+        _currentUser = user;
+      });
+      _showMessage('头像已更新');
+    } on AuthApiException catch (error) {
+      if (!mounted) return;
+      _showMessage(error.message);
+    } catch (_) {
+      if (!mounted) return;
+      _showMessage('头像上传失败，请稍后重试');
+    } finally {
+      if (mounted) {
+        setState(() => _uploadingAvatar = false);
+      }
+    }
   }
 
   Future<void> _bindProfileEmail() async {
@@ -863,11 +892,12 @@ class _HomePageState extends State<HomePage> {
         _ProfilePanel(
           formKey: _profileFormKey,
           user: _currentUser,
-          avatarController: _avatarController,
           emailController: _emailController,
           passwordController: _profilePasswordController,
           confirmPasswordController: _profileConfirmPasswordController,
           submitting: _submitting,
+          uploadingAvatar: _uploadingAvatar,
+          onAvatarTap: _changeAvatar,
           onSubmit: _updateProfile,
           onBindEmail: _bindProfileEmail,
           onLogout: _logout,
@@ -1277,11 +1307,12 @@ class _ProfilePanel extends StatelessWidget {
   const _ProfilePanel({
     required this.formKey,
     required this.user,
-    required this.avatarController,
     required this.emailController,
     required this.passwordController,
     required this.confirmPasswordController,
     required this.submitting,
+    required this.uploadingAvatar,
+    required this.onAvatarTap,
     required this.onSubmit,
     required this.onBindEmail,
     required this.onLogout,
@@ -1289,11 +1320,12 @@ class _ProfilePanel extends StatelessWidget {
 
   final GlobalKey<FormState> formKey;
   final UserProfile user;
-  final TextEditingController avatarController;
   final TextEditingController emailController;
   final TextEditingController passwordController;
   final TextEditingController confirmPasswordController;
   final bool submitting;
+  final bool uploadingAvatar;
+  final VoidCallback onAvatarTap;
   final VoidCallback onSubmit;
   final VoidCallback onBindEmail;
   final VoidCallback onLogout;
@@ -1311,21 +1343,10 @@ class _ProfilePanel extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    radius: 34,
-                    backgroundColor: const Color(0xFF27332D),
-                    foregroundImage:
-                        user.avatar != null && user.avatar!.trim().isNotEmpty
-                        ? NetworkImage(user.avatar!.trim())
-                        : null,
-                    child: Text(
-                      user.realName.isEmpty ? '?' : user.realName[0],
-                      style: const TextStyle(
-                        color: Color(0xFFF8F4EA),
-                        fontWeight: FontWeight.w900,
-                        fontSize: 22,
-                      ),
-                    ),
+                  _EditableAvatar(
+                    user: user,
+                    uploading: uploadingAvatar,
+                    onTap: onAvatarTap,
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -1394,11 +1415,12 @@ class _ProfilePanel extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                TextFormField(
-                  controller: avatarController,
-                  decoration: const InputDecoration(
-                    labelText: '头像地址',
-                    prefixIcon: Icon(Icons.image_rounded),
+                Center(
+                  child: _EditableAvatar(
+                    user: user,
+                    radius: 44,
+                    uploading: uploadingAvatar,
+                    onTap: onAvatarTap,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -1475,6 +1497,86 @@ class _ProfilePanel extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+class _EditableAvatar extends StatelessWidget {
+  const _EditableAvatar({
+    required this.user,
+    required this.uploading,
+    required this.onTap,
+    this.radius = 34,
+  });
+
+  final UserProfile user;
+  final bool uploading;
+  final VoidCallback onTap;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final avatarUrl = user.avatar?.trim();
+    final initials = user.realName.isEmpty ? '?' : user.realName[0];
+    final size = radius * 2;
+
+    return Tooltip(
+      message: uploading ? '头像上传中' : '更换头像',
+      child: Semantics(
+        button: true,
+        label: '更换头像',
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: uploading ? null : onTap,
+          child: SizedBox.square(
+            dimension: size,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                CircleAvatar(
+                  radius: radius,
+                  backgroundColor: const Color(0xFF27332D),
+                  foregroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                      ? NetworkImage(avatarUrl)
+                      : null,
+                  child: Text(
+                    initials,
+                    style: TextStyle(
+                      color: const Color(0xFFF8F4EA),
+                      fontWeight: FontWeight.w900,
+                      fontSize: radius * 0.64,
+                    ),
+                  ),
+                ),
+                Positioned(
+                  right: -2,
+                  bottom: -2,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F4EA),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFF27332D)),
+                    ),
+                    child: SizedBox.square(
+                      dimension: radius * 0.82,
+                      child: uploading
+                          ? const Padding(
+                              padding: EdgeInsets.all(5),
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : Icon(
+                              Icons.photo_camera_rounded,
+                              size: radius * 0.42,
+                              color: const Color(0xFF27332D),
+                            ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
