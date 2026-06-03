@@ -36,7 +36,7 @@ jobs:
         run: flutter test
 
       - name: Build APK
-        run: flutter build apk --release --dart-define=API_BASE_URL=http://srbb.komira.top
+        run: flutter build apk --release --dart-define=API_BASE_URL=https://srbb.komira.top
 
       - name: Upload APK to release
         uses: softprops/action-gh-release@v2
