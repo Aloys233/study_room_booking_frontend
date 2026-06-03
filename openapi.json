@@ -1,0 +1,4400 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Study Room Booking API",
+    "description": "Based on the database design document for the study room booking system. This document defines student-side and admin-side APIs for room browsing, seat map queries, reservation, check-in, waiting queue, room management, rule management, and statistics.",
+    "version": "1.0.0"
+  },
+  "tags": [],
+  "paths": {
+    "/api/auth/user/login": {
+      "post": {
+        "summary": "学生/教师/校外人员登录",
+        "deprecated": false,
+        "description": "学生和教师可使用学号/工号或绑定邮箱登录，校外人员使用邮箱登录。成功后返回访问令牌和当前用户信息。",
+        "tags": [],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_LoginResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/auth/admin/login": {
+      "post": {
+        "summary": "管理员端登录",
+        "deprecated": false,
+        "description": "管理员使用管理员登录名和密码登录，成功后返回访问令牌和当前管理员信息。",
+        "tags": [],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "登录成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_LoginResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/auth/register": {
+      "post": {
+        "summary": "校外人员注册",
+        "deprecated": false,
+        "description": "校外人员使用邮箱和密码自助注册账号。注册成功后角色固定为 OUTSIDER、状态为 NORMAL、activated 为 FALSE，并发送邮箱验证邮件。注册成功不直接返回令牌，客户端应跳转登录。",
+        "tags": [],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "注册成功，返回新建用户信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_UserProfile"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "summary": "获取当前登录用户",
+        "deprecated": false,
+        "description": "根据 Bearer Token 查询当前登录用户资料。",
+        "tags": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "当前用户信息",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_UserProfile"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/time-slots": {
+      "get": {
+        "summary": "管理端查询时间段列表",
+        "deprecated": false,
+        "description": "查询全局固定预约时间段。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "时间段列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_TimeSlotList"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "创建时间段",
+        "deprecated": false,
+        "description": "创建一个全局固定预约时间段。",
+        "tags": [],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTimeSlotRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "时间段创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_TimeSlot"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/time-slots/{slotId}": {
+      "put": {
+        "summary": "更新时间段",
+        "deprecated": false,
+        "description": "整体更新全局固定预约时间段。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "slotId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTimeSlotRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "更新后的时间段",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_TimeSlot"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/time-slots": {
+      "get": {
+        "summary": "查询可用预约时间段",
+        "deprecated": false,
+        "description": "返回当前启用的全局固定预约时间段，供学生端和教师端选择。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "时间段列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_TimeSlotList"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/rooms": {
+      "post": {
+        "summary": "创建自习室",
+        "deprecated": false,
+        "description": "创建自习室基础信息、座位布局、开放星期和启用时间段。",
+        "tags": [],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoomRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "自习室创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_StudyRoomDetail"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "get": {
+        "summary": "管理端查询自习室列表",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "自习室列表摘要",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_StudyRoomList"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/rooms/{roomId}": {
+      "get": {
+        "summary": "管理端查询自习室详情",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "roomId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "自习室详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_StudyRoomDetail"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "summary": "更新自习室",
+        "deprecated": false,
+        "description": "整体替换自习室基础信息、座位布局、开放星期和启用时间段。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "roomId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoomRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "更新后的自习室详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_StudyRoomDetail"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/rooms/{roomId}": {
+      "get": {
+        "summary": "查询自习室详情",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "roomId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "自习室详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_StudyRoomDetail"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/rooms": {
+      "get": {
+        "summary": "查询自习室列表",
+        "deprecated": false,
+        "description": "支持按状态、校区、楼栋筛选。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/RoomStatus"
+            }
+          },
+          {
+            "name": "campus",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "building",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "自习室列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_StudyRoomList"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/rooms/{roomId}/seats": {
+      "get": {
+        "summary": "查询自习室座位列表",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "roomId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "座位列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SeatList"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "创建座位",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "roomId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateSeatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "座位创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_Seat"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/rooms/{roomId}/seats/{seatId}": {
+      "get": {
+        "summary": "查询座位详情",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "roomId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "seatId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "座位详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_Seat"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "summary": "更新座位",
+        "deprecated": false,
+        "description": "整体替换座位编号、类型、标签、备注等。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "roomId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "seatId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSeatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "更新后的座位",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_Seat"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/rooms/{roomId}/seat-map": {
+      "get": {
+        "summary": "查询自习室座位图",
+        "deprecated": false,
+        "description": "根据座位物理状态、指定 reserveDate + slotId 内的有效预约和整室预约，计算座位展示状态。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "roomId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "reserveDate",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "slotId",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "座位图数据",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SeatMapResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/rooms/{roomId}/available-seats": {
+      "get": {
+        "summary": "查询可预约座位",
+        "deprecated": false,
+        "description": "按预约日期、固定时间段、座位类型、座位标签筛选指定自习室内可被预约的座位。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "roomId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "reserveDate",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "slotId",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "seatType",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "seatTags",
+            "in": "query",
+            "description": "逗号分隔的座位标签，例如 WINDOW,POWER",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "可预约座位列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SeatList"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/reservations/precheck": {
+      "get": {
+        "summary": "创建预约前预检",
+        "deprecated": false,
+        "description": "根据 roomId、seatId、reserveDate、slotId 校验开放星期、启用时间段、全局配置、当天预约次数、活跃预约数、座位物理状态、整室预约和座位占用冲突。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "roomId",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "seatId",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          },
+          {
+            "name": "reserveDate",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "slotId",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "预检结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ReservationAvailabilityResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/reservations": {
+      "get": {
+        "summary": "查询我的预约列表",
+        "deprecated": false,
+        "description": "支持按状态筛选，返回待签到、已签到、已取消、已过期、已完成记录。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ReservationStatus"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "预约分页列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ReservationPage"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "创建预约",
+        "deprecated": false,
+        "description": "服务端需在事务内校验开放时段、生效规则、活跃预约上限、每日预约上限以及排他约束，避免座位时间段冲突。",
+        "tags": [],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateReservationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "预约创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ReservationDetail"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/reservations/{reservationId}": {
+      "get": {
+        "summary": "查询预约详情",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "reservationId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "预约详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ReservationDetail"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "取消预约",
+        "deprecated": false,
+        "description": "仅待签到状态的预约可取消，并受 system_config.cancelDeadlineMinutes 控制。取消成功后预约状态置为 CANCELLED 并释放座位。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "reservationId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "取消后的预约详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ReservationDetail"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/room-reservations/{roomReservationId}/review": {
+      "post": {
+        "summary": "审核整室预约",
+        "deprecated": false,
+        "description": "管理员审批或驳回教师整室预约。审批通过时，服务端需在同一事务内校验该自习室、预约日期和时间段没有有效散座预约。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "roomReservationId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRoomReservationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "审核后的整室预约详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_RoomReservation"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/room-reservations": {
+      "get": {
+        "summary": "查询我的整室预约",
+        "deprecated": false,
+        "description": "教师查询自己发起的整间自习室预约记录。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/RoomReservationStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "整室预约列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_RoomReservationList"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "创建整室预约",
+        "deprecated": false,
+        "description": "教师按自习室、预约日期和固定时间段申请整室预约。",
+        "tags": [],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoomReservationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "整室预约创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_RoomReservation"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/room-reservations/{roomReservationId}": {
+      "get": {
+        "summary": "查询整室预约详情",
+        "deprecated": false,
+        "description": "查询教师整室预约详情。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "roomReservationId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "整室预约详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_RoomReservation"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "summary": "取消整室预约",
+        "deprecated": false,
+        "description": "教师取消自己发起的整室预约。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "roomReservationId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "取消成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_RoomReservation"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/reservations/{reservationId}/check-in": {
+      "post": {
+        "summary": "预约签到",
+        "deprecated": false,
+        "description": "仅待签到且未超过动态计算出的最晚签到时间的预约可签到成功。最晚签到时间由 reserveDate、time_slot.startTime 和 system_config.checkinTimeoutMinutes 计算得出。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "reservationId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "签到成功后的预约详情",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ReservationDetail"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/waiting-queues": {
+      "get": {
+        "summary": "查询我的候补记录",
+        "deprecated": false,
+        "description": "",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/WaitingStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "候补记录列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_WaitingQueueList"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "summary": "加入候补队列",
+        "deprecated": false,
+        "description": "目标日期和固定时间段无空闲座位时，学生可按 roomId、reserveDate、slotId 加入候补。",
+        "tags": [],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateWaitingQueueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "候补创建成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_WaitingQueueEntry"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/waiting-queues/{waitingId}": {
+      "delete": {
+        "summary": "取消候补",
+        "deprecated": false,
+        "description": "处于 WAITING 或 NOTIFIED 状态的候补可由用户主动取消。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "waitingId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "取消后的候补记录",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_WaitingQueueEntry"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/waiting-queues/{waitingId}/accept": {
+      "post": {
+        "summary": "接受候补机会",
+        "deprecated": false,
+        "description": "处于 NOTIFIED 状态且在 confirm_deadline_at 之前可接受，服务端原子创建预约并把候补状态置为 FULFILLED。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "waitingId",
+            "in": "path",
+            "description": "",
+            "required": true,
+            "example": 0,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "接受成功，返回候补与新建的预约",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_WaitingAcceptResponse"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/system-config": {
+      "get": {
+        "summary": "查询全局预约配置",
+        "deprecated": false,
+        "description": "查询 system_config 中全校统一预约规则。",
+        "tags": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "全局预约配置",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SystemConfig"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "summary": "更新全局预约配置",
+        "deprecated": false,
+        "description": "整体更新 system_config 中全校统一预约规则。",
+        "tags": [],
+        "parameters": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateSystemConfigRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "更新后的全局预约配置",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_SystemConfig"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/statistics/room-occupancy": {
+      "get": {
+        "summary": "查询自习室入住率",
+        "deprecated": false,
+        "description": "按业务日期统计各自习室可用座位数与已签到/已完成预约数。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "bizDate",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "入住率统计",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_OccupancyStatList"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/statistics/hot-time-slots": {
+      "get": {
+        "summary": "查询热门时间段",
+        "deprecated": false,
+        "description": "按固定时间段统计指定业务日期范围内的预约量。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "startDate",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "热门时间段统计",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_HotSlotStatList"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/statistics/expired-check-ins": {
+      "get": {
+        "summary": "查询超时未签到统计",
+        "deprecated": false,
+        "description": "统计指定业务日期范围内被自动置为 EXPIRED 的预约数量。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "startDate",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "endDate",
+            "in": "query",
+            "description": "",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "超时未签到统计",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_ExpiredCheckInStatList"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/operation-logs": {
+      "get": {
+        "summary": "查询管理操作日志",
+        "deprecated": false,
+        "description": "支持按目标类型、目标 ID 过滤。",
+        "tags": [],
+        "parameters": [
+          {
+            "name": "targetType",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "targetId",
+            "in": "query",
+            "description": "",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "操作日志列表",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_OperationLogList"
+                }
+              }
+            },
+            "headers": {}
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "webhooks": {},
+  "components": {
+    "schemas": {
+      "ApiResponse": {
+        "type": "object",
+        "description": "统一响应包装。code 为 0 表示成功，非 0 表示业务错误；msg 为提示信息；data 为业务数据，无数据时为 null。",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "description": "业务状态码，0 表示成功",
+            "examples": [
+              0
+            ]
+          },
+          "msg": {
+            "type": "string",
+            "description": "提示信息",
+            "examples": [
+              "ok"
+            ]
+          },
+          "data": {
+            "description": "业务数据，由具体接口决定，无数据时为 null",
+            "type": "null"
+          }
+        },
+        "required": [
+          "code",
+          "msg"
+        ]
+      },
+      "ApiResponse_Empty": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": [
+                  "null"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "ApiResponse_LoginResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/LoginResponse"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_UserProfile": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/UserProfile"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_StudyRoomList": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/StudyRoomListItem"
+                }
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_StudyRoomDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/StudyRoomDetail"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_StudyRoomDetailList": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/StudyRoomDetail"
+                }
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_SeatMapResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/SeatMapResponse"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_Seat": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/Seat"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_SeatList": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/Seat"
+                }
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_ReservationRule": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/ReservationRule"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_ReservationAvailabilityResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/ReservationAvailabilityResponse"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_ReservationDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/ReservationDetail"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_ReservationPage": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/ReservationPage"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_WaitingQueueEntry": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/WaitingQueueEntry"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_WaitingQueueList": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/WaitingQueueEntry"
+                }
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_WaitingAcceptResponse": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/WaitingAcceptResponse"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ReservationPageResponse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReservationSummary"
+            }
+          },
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ]
+      },
+      "ApiResponse_OpenScheduleList": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/OpenSchedule"
+                }
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_OccupancyStatList": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/OccupancyStat"
+                }
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_SeatLayoutTemplate": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/SeatLayoutTemplate"
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_HotSlotStatList": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/HotSlotStat"
+                }
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_SeatLayoutTemplateList": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/SeatLayoutTemplate"
+                }
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_ExpiredCheckInStatList": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ExpiredCheckInStat"
+                }
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_SeatLayoutTemplateItemList": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/SeatLayoutTemplateItem"
+                }
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "ApiResponse_OperationLogList": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/OperationLog"
+                }
+              }
+            },
+            "required": [
+              "data"
+            ]
+          }
+        ]
+      },
+      "UserRole": {
+        "type": "string",
+        "enum": [
+          "STUDENT",
+          "TEACHER",
+          "ADMIN"
+        ]
+      },
+      "UserStatus": {
+        "type": "string",
+        "enum": [
+          "NORMAL",
+          "DISABLED"
+        ]
+      },
+      "RoomStatus": {
+        "type": "string",
+        "enum": [
+          "OPEN",
+          "CLOSED",
+          "MAINTENANCE"
+        ]
+      },
+      "SeatStatus": {
+        "type": "string",
+        "enum": [
+          "AVAILABLE",
+          "BROKEN",
+          "DISABLED"
+        ]
+      },
+      "SeatDisplayStatus": {
+        "type": "string",
+        "enum": [
+          "AVAILABLE",
+          "OCCUPIED",
+          "BROKEN",
+          "DISABLED"
+        ]
+      },
+      "ReservationStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING_CHECKIN",
+          "CHECKED_IN",
+          "CANCELLED",
+          "EXPIRED",
+          "FINISHED"
+        ]
+      },
+      "ReservationPreCheckRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CreateReservationRequest"
+          }
+        ]
+      },
+      "CheckInType": {
+        "type": "string",
+        "enum": [
+          "QR_CODE",
+          "MANUAL",
+          "LOCATION"
+        ]
+      },
+      "ReservationPreCheckResponse": {
+        "type": "object",
+        "properties": {
+          "allowed": {
+            "type": "boolean"
+          },
+          "remainingDailyQuota": {
+            "type": "integer"
+          },
+          "activeReservationCount": {
+            "type": "integer"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "systemConfig": {
+            "$ref": "#/components/schemas/SystemConfig"
+          }
+        },
+        "required": [
+          "allowed",
+          "remainingDailyQuota",
+          "activeReservationCount",
+          "reasons"
+        ]
+      },
+      "WaitingStatus": {
+        "type": "string",
+        "enum": [
+          "WAITING",
+          "NOTIFIED",
+          "ACCEPTED",
+          "CANCELLED",
+          "EXPIRED",
+          "FULFILLED"
+        ]
+      },
+      "CheckInStatus": {
+        "type": "string",
+        "enum": [
+          "SUCCESS",
+          "FAILED"
+        ]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "description": "学生/教师/校外人员登录请求。",
+        "properties": {
+          "userNo": {
+            "type": "string",
+            "description": "登录账号，可为学生学号、教师工号或邮箱。"
+          },
+          "loginName": {
+            "type": "string",
+            "description": "登录账号，可为学生学号、教师工号或邮箱。优先使用该字段；userNo 保留用于兼容旧客户端。"
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          },
+          "turnstileToken": {
+            "type": "string",
+            "description": "Cloudflare Turnstile 客户端验证 token。"
+          }
+        },
+        "required": [
+          "password",
+          "turnstileToken"
+        ]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "JWT 访问令牌，后续请求放入 Authorization: Bearer 头"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserProfile"
+          }
+        },
+        "required": [
+          "accessToken",
+          "user"
+        ]
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "description": "校外人员自助注册请求。学生、教师和管理员账号不通过该接口注册。",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 255,
+            "description": "校外人员邮箱，作为登录账号，全局唯一。"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "minLength": 6,
+            "maxLength": 64
+          },
+          "realName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 50
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "realName"
+        ]
+      },
+      "UserProfile": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "loginName": {
+            "type": "string",
+            "description": "当前身份的登录名。学生/教师为 userNo，管理员为 username。"
+          },
+          "userNo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "学生/教师学号或工号。管理员为空。"
+          },
+          "username": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "管理员用户名。学生/教师为空。"
+          },
+          "realName": {
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/UserRole"
+          },
+          "status": {
+            "$ref": "#/components/schemas/UserStatus"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "loginName",
+          "realName",
+          "role",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "StudyRoomListItem": {
+        "type": "object",
+        "description": "自习室列表项，只包含列表展示所需字段；座位布局、开放星期等详细信息由详情接口返回。",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "campus": {
+            "type": "string"
+          },
+          "building": {
+            "type": "string"
+          },
+          "floor": {
+            "type": "string"
+          },
+          "locationDetail": {
+            "type": "string"
+          },
+          "totalSeats": {
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RoomStatus"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "campus",
+          "building",
+          "floor",
+          "locationDetail",
+          "name",
+          "status",
+          "totalSeats"
+        ]
+      },
+      "StudyRoom": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "campus": {
+            "type": "string"
+          },
+          "building": {
+            "type": "string"
+          },
+          "floor": {
+            "type": "string"
+          },
+          "locationDetail": {
+            "type": "string"
+          },
+          "totalSeats": {
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RoomStatus"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "seatLayout": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeatLayoutItem"
+            },
+            "description": "自习室座位布局 JSON。seatNo 与座位表 seatNo 对应。"
+          },
+          "openWeekdays": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 7
+            },
+            "description": "开放星期，1 表示周一，7 表示周日。"
+          }
+        },
+        "required": [
+          "id",
+          "campus",
+          "building",
+          "floor",
+          "locationDetail",
+          "name",
+          "openWeekdays",
+          "status",
+          "totalSeats"
+        ]
+      },
+      "StudyRoomDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/StudyRoom"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "createdAt",
+              "updatedAt"
+            ]
+          }
+        ]
+      },
+      "Seat": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "roomId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "seatIndex": {
+            "type": "integer"
+          },
+          "seatNo": {
+            "type": "string"
+          },
+          "seatType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "$ref": "#/components/schemas/SeatStatus"
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "roomId",
+          "seatIndex",
+          "seatNo",
+          "tags",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "SeatMapItem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Seat"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "displayStatus": {
+                "$ref": "#/components/schemas/SeatDisplayStatus"
+              }
+            },
+            "required": [
+              "displayStatus"
+            ]
+          }
+        ]
+      },
+      "SeatMapResponse": {
+        "type": "object",
+        "properties": {
+          "roomId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reserveDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "slotId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeatMapItem"
+            }
+          }
+        },
+        "required": [
+          "roomId",
+          "reserveDate",
+          "slotId",
+          "items"
+        ]
+      },
+      "ReservationSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "roomId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "roomName": {
+            "type": "string"
+          },
+          "seatId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "seatNo": {
+            "type": "string"
+          },
+          "reserveStartAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reserveEndAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ReservationStatus"
+          },
+          "checkedInAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "cancelledAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reserveDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "slotId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "slotName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "createdAt",
+          "id",
+          "reserveDate",
+          "reserveEndAt",
+          "reserveStartAt",
+          "roomId",
+          "roomName",
+          "seatId",
+          "seatNo",
+          "slotId",
+          "status"
+        ]
+      },
+      "ReservationDetail": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ReservationSummary"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "userId": {
+                "type": "integer",
+                "format": "int64"
+              },
+              "sourceWaitingId": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "format": "int64"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "userId",
+              "updatedAt"
+            ]
+          }
+        ]
+      },
+      "OpenSchedule": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "weekday": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 7
+          },
+          "openTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$"
+          },
+          "closeTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$"
+          },
+          "isOpen": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "weekday",
+          "openTime",
+          "closeTime",
+          "isOpen"
+        ]
+      },
+      "ReservationPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReservationSummary"
+            }
+          },
+          "page": {
+            "type": "integer"
+          },
+          "pageSize": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "page",
+          "pageSize",
+          "total"
+        ]
+      },
+      "WaitingQueueEntry": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "roomId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "preferredSeatId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "seatType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "seatTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "queueNo": {
+            "type": "integer"
+          },
+          "status": {
+            "$ref": "#/components/schemas/WaitingStatus"
+          },
+          "notifiedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "confirmDeadlineAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "acceptedReservationId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "cancelledAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "expiredAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reserveDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "slotId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "slotName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "createdAt",
+          "id",
+          "queueNo",
+          "reserveDate",
+          "roomId",
+          "seatTags",
+          "slotId",
+          "status",
+          "updatedAt",
+          "userId"
+        ]
+      },
+      "OccupancyStat": {
+        "type": "object",
+        "properties": {
+          "roomId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "roomName": {
+            "type": "string"
+          },
+          "usableSeatCount": {
+            "type": "integer"
+          },
+          "reservationCount": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "roomId",
+          "roomName",
+          "usableSeatCount",
+          "reservationCount"
+        ]
+      },
+      "CheckInRecord": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reservationId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "checkinTime": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "checkinType": {
+            "$ref": "#/components/schemas/CheckInType"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CheckInStatus"
+          },
+          "failureReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "reservationId",
+          "userId",
+          "checkinTime",
+          "checkinType",
+          "status",
+          "createdAt"
+        ]
+      },
+      "HotSlotStat": {
+        "type": "object",
+        "properties": {
+          "hourSlot": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "reservationCount": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "hourSlot",
+          "reservationCount"
+        ]
+      },
+      "ExpiredCheckInStat": {
+        "type": "object",
+        "properties": {
+          "roomId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "expiredCount": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "roomId",
+          "expiredCount"
+        ]
+      },
+      "OperationLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "userId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "operation": {
+            "type": "string"
+          },
+          "targetType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "targetId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "content": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": true,
+            "properties": {}
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "operation",
+          "createdAt"
+        ]
+      },
+      "ReservationRule": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "roomId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "ruleName": {
+            "type": "string"
+          },
+          "maxDailyReservation": {
+            "type": "integer"
+          },
+          "maxActiveReservation": {
+            "type": "integer"
+          },
+          "maxDurationMinutes": {
+            "type": "integer"
+          },
+          "checkinTimeoutMinutes": {
+            "type": "integer"
+          },
+          "allowWaiting": {
+            "type": "boolean"
+          },
+          "waitingConfirmMinutes": {
+            "type": "integer"
+          },
+          "allowAdvanceReservation": {
+            "type": "boolean"
+          },
+          "maxAdvanceDays": {
+            "type": "integer"
+          },
+          "cancelDeadlineMinutes": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "ruleName",
+          "maxDailyReservation",
+          "maxActiveReservation",
+          "maxDurationMinutes",
+          "checkinTimeoutMinutes",
+          "allowWaiting",
+          "waitingConfirmMinutes",
+          "allowAdvanceReservation",
+          "maxAdvanceDays",
+          "cancelDeadlineMinutes",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "ReservationAvailabilityResponse": {
+        "type": "object",
+        "properties": {
+          "allowed": {
+            "type": "boolean"
+          },
+          "remainingDailyQuota": {
+            "type": "integer"
+          },
+          "activeReservationCount": {
+            "type": "integer"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "systemConfig": {
+            "$ref": "#/components/schemas/SystemConfig"
+          }
+        },
+        "required": [
+          "allowed",
+          "remainingDailyQuota",
+          "activeReservationCount",
+          "reasons"
+        ]
+      },
+      "CreateReservationRequest": {
+        "type": "object",
+        "properties": {
+          "roomId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "seatId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reserveDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "slotId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sourceWaitingId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          }
+        },
+        "required": [
+          "roomId",
+          "seatId",
+          "reserveDate",
+          "slotId"
+        ]
+      },
+      "CreateWaitingQueueRequest": {
+        "type": "object",
+        "properties": {
+          "roomId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "preferredSeatId": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "seatType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "seatTags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "reserveDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "slotId": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "roomId",
+          "reserveDate",
+          "slotId"
+        ]
+      },
+      "WaitingAcceptResponse": {
+        "type": "object",
+        "properties": {
+          "waitingEntry": {
+            "$ref": "#/components/schemas/WaitingQueueEntry"
+          },
+          "reservation": {
+            "$ref": "#/components/schemas/ReservationDetail"
+          }
+        },
+        "required": [
+          "waitingEntry",
+          "reservation"
+        ]
+      },
+      "CreateRoomRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "campus": {
+            "type": "string"
+          },
+          "building": {
+            "type": "string"
+          },
+          "floor": {
+            "type": "string"
+          },
+          "locationDetail": {
+            "type": "string"
+          },
+          "totalSeats": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "新建自习室时要自动创建的初始座位数量。"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RoomStatus"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "seatLayout": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeatLayoutItem"
+            }
+          },
+          "openWeekdays": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 7
+            }
+          }
+        },
+        "required": [
+          "name",
+          "campus",
+          "building",
+          "floor",
+          "locationDetail",
+          "totalSeats",
+          "status",
+          "openWeekdays"
+        ]
+      },
+      "CheckInRequest": {
+        "type": "object",
+        "properties": {
+          "checkinType": {
+            "$ref": "#/components/schemas/CheckInType"
+          }
+        },
+        "required": [
+          "checkinType"
+        ]
+      },
+      "UpdateRoomRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CreateRoomRequest"
+          }
+        ]
+      },
+      "SeatLayoutTemplate": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "templateCode": {
+            "type": "string"
+          },
+          "templateName": {
+            "type": "string"
+          },
+          "templateVersion": {
+            "type": "integer"
+          },
+          "scopeType": {
+            "type": "string"
+          },
+          "status": {
+            "type": "boolean"
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "templateCode",
+          "templateName",
+          "templateVersion",
+          "scopeType",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "PatchRoomRequest": {
+        "type": "object",
+        "description": "全部字段可选，仅更新提交的字段。",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "campus": {
+            "type": "string"
+          },
+          "building": {
+            "type": "string"
+          },
+          "floor": {
+            "type": "string"
+          },
+          "locationDetail": {
+            "type": "string"
+          },
+          "totalSeats": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "status": {
+            "$ref": "#/components/schemas/RoomStatus"
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "seatLayout": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SeatLayoutItem"
+            }
+          },
+          "openWeekdays": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 7
+            }
+          }
+        }
+      },
+      "SeatLayoutTemplateItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "templateId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "seatIndex": {
+            "type": "integer"
+          },
+          "seatLabel": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "areaCode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "templateId",
+          "seatIndex",
+          "createdAt"
+        ]
+      },
+      "CreateSeatRequest": {
+        "type": "object",
+        "properties": {
+          "seatIndex": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "seatNo": {
+            "type": "string"
+          },
+          "seatType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "$ref": "#/components/schemas/SeatStatus"
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "seatIndex",
+          "seatNo",
+          "status"
+        ]
+      },
+      "UpdateSeatRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CreateSeatRequest"
+          }
+        ]
+      },
+      "PatchSeatRequest": {
+        "type": "object",
+        "description": "全部字段可选，常用于将座位置为损坏或停用。",
+        "properties": {
+          "seatIndex": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "seatNo": {
+            "type": "string"
+          },
+          "seatType": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "status": {
+            "$ref": "#/components/schemas/SeatStatus"
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "TimeSlot": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "slotName": {
+            "type": "string"
+          },
+          "startTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$"
+          },
+          "endTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$"
+          },
+          "sortOrder": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "slotName",
+          "startTime",
+          "endTime",
+          "sortOrder",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "CreateTimeSlotRequest": {
+        "type": "object",
+        "properties": {
+          "slotName": {
+            "type": "string"
+          },
+          "startTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$"
+          },
+          "endTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "default": 0
+          },
+          "status": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": [
+          "slotName",
+          "startTime",
+          "endTime"
+        ]
+      },
+      "UpdateTimeSlotRequest": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CreateTimeSlotRequest"
+          }
+        ]
+      },
+      "PatchTimeSlotRequest": {
+        "type": "object",
+        "properties": {
+          "slotName": {
+            "type": "string"
+          },
+          "startTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$"
+          },
+          "endTime": {
+            "type": "string",
+            "pattern": "^([01]\\d|2[0-3]):[0-5]\\d(:[0-5]\\d)?$"
+          },
+          "sortOrder": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ApiResponse_TimeSlotList": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/TimeSlot"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ApiResponse_TimeSlot": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/TimeSlot"
+              }
+            }
+          }
+        ]
+      },
+      "SystemConfig": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "maxDailyReservation": {
+            "type": "integer"
+          },
+          "maxActiveReservation": {
+            "type": "integer"
+          },
+          "checkinTimeoutMinutes": {
+            "type": "integer"
+          },
+          "allowWaiting": {
+            "type": "boolean"
+          },
+          "waitingConfirmMinutes": {
+            "type": "integer"
+          },
+          "maxAdvanceDays": {
+            "type": "integer"
+          },
+          "cancelDeadlineMinutes": {
+            "type": "integer"
+          },
+          "updatedBy": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "maxDailyReservation",
+          "maxActiveReservation",
+          "checkinTimeoutMinutes",
+          "allowWaiting",
+          "waitingConfirmMinutes",
+          "maxAdvanceDays",
+          "cancelDeadlineMinutes",
+          "updatedAt"
+        ]
+      },
+      "UpdateSystemConfigRequest": {
+        "type": "object",
+        "properties": {
+          "maxDailyReservation": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "maxActiveReservation": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "checkinTimeoutMinutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "allowWaiting": {
+            "type": "boolean"
+          },
+          "waitingConfirmMinutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "allowAdvanceReservation": {
+            "type": "boolean"
+          },
+          "maxAdvanceDays": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cancelDeadlineMinutes": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "maxDailyReservation",
+          "maxActiveReservation",
+          "checkinTimeoutMinutes",
+          "allowWaiting",
+          "waitingConfirmMinutes",
+          "allowAdvanceReservation",
+          "maxAdvanceDays",
+          "cancelDeadlineMinutes"
+        ]
+      },
+      "ApiResponse_SystemConfig": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/SystemConfig"
+              }
+            }
+          }
+        ]
+      },
+      "SeatLayoutItem": {
+        "type": "object",
+        "properties": {
+          "seatNo": {
+            "type": "string"
+          },
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "row": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "col": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "areaCode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "seatNo",
+          "x",
+          "y"
+        ]
+      },
+      "ReplaceOpenSchedulesRequest": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "weekday": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 7
+                },
+                "openTime": {
+                  "type": "string"
+                },
+                "closeTime": {
+                  "type": "string"
+                },
+                "isOpen": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "weekday",
+                "openTime",
+                "closeTime",
+                "isOpen"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "CreateRoomReservationRequest": {
+        "type": "object",
+        "properties": {
+          "roomId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "reserveDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "slotId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "roomId",
+          "purpose",
+          "reserveDate",
+          "slotId"
+        ]
+      },
+      "ReviewRoomReservationRequest": {
+        "type": "object",
+        "description": "管理员审核整室预约请求。审核通过传 APPROVED，驳回传 REJECTED。",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "APPROVED",
+              "REJECTED"
+            ]
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "RoomReservationStatus": {
+        "type": "string",
+        "enum": [
+          "PENDING_APPROVAL",
+          "APPROVED",
+          "REJECTED",
+          "CANCELLED",
+          "FINISHED"
+        ]
+      },
+      "RoomReservation": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "roomId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "roomName": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "reserveDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "slotId": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "slotName": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RoomReservationStatus"
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "userId",
+          "roomId",
+          "purpose",
+          "reserveDate",
+          "slotId",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpsertReservationRuleRequest": {
+        "type": "object",
+        "properties": {
+          "ruleName": {
+            "type": "string"
+          },
+          "maxDailyReservation": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "maxActiveReservation": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "maxDurationMinutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "checkinTimeoutMinutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "allowWaiting": {
+            "type": "boolean"
+          },
+          "waitingConfirmMinutes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "maxAdvanceDays": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "cancelDeadlineMinutes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "status": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ruleName",
+          "maxDailyReservation",
+          "maxActiveReservation",
+          "maxDurationMinutes",
+          "checkinTimeoutMinutes",
+          "allowWaiting",
+          "waitingConfirmMinutes",
+          "maxAdvanceDays",
+          "cancelDeadlineMinutes",
+          "status"
+        ]
+      },
+      "ApiResponse_RoomReservation": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "$ref": "#/components/schemas/RoomReservation"
+              }
+            }
+          }
+        ]
+      },
+      "CreateTemplateRequest": {
+        "type": "object",
+        "properties": {
+          "templateCode": {
+            "type": "string"
+          },
+          "templateName": {
+            "type": "string"
+          },
+          "templateVersion": {
+            "type": "integer",
+            "default": 1
+          },
+          "scopeType": {
+            "type": "string",
+            "default": "ROOM"
+          },
+          "status": {
+            "type": "boolean"
+          },
+          "remark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "templateCode",
+          "templateName",
+          "status"
+        ]
+      },
+      "ApiResponse_RoomReservationList": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ApiResponse"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/RoomReservation"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ReplaceTemplateItemsRequest": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "seatIndex": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "seatLabel": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "areaCode": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "seatIndex"
+              ]
+            }
+          }
+        },
+        "required": [
+          "items"
+        ]
+      },
+      "UserLoginRequest": {
+        "type": "object",
+        "description": "学生/教师/校外人员登录请求。",
+        "properties": {
+          "userNo": {
+            "type": "string",
+            "description": "登录账号，可为学生学号、教师工号或邮箱。"
+          },
+          "loginName": {
+            "type": "string",
+            "description": "登录账号，可为学生学号、教师工号或邮箱。优先使用该字段；userNo 保留用于兼容旧客户端。"
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          }
+        },
+        "required": [
+          "password"
+        ]
+      },
+      "AdminLoginRequest": {
+        "type": "object",
+        "description": "管理员端登录请求。",
+        "properties": {
+          "username": {
+            "type": "string",
+            "description": "管理员登录名。"
+          },
+          "password": {
+            "type": "string",
+            "format": "password"
+          },
+          "turnstileToken": {
+            "type": "string",
+            "description": "Cloudflare Turnstile 客户端验证 token。"
+          }
+        },
+        "required": [
+          "username",
+          "password",
+          "turnstileToken"
+        ]
+      }
+    },
+    "responses": {},
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "parameters": {
+      "RoomId": {
+        "name": "roomId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "SeatId": {
+        "name": "seatId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "ReservationId": {
+        "name": "reservationId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "WaitingId": {
+        "name": "waitingId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "TemplateId": {
+        "name": "templateId",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "StartAt": {
+        "name": "startAt",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "EndAt": {
+        "name": "endAt",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "ReserveDate": {
+        "name": "reserveDate",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "date"
+        }
+      },
+      "SlotId": {
+        "name": "slotId",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "StartDate": {
+        "name": "startDate",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "date"
+        }
+      },
+      "EndDate": {
+        "name": "endDate",
+        "in": "query",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "date"
+        }
+      }
+    }
+  },
+  "servers": [],
+  "security": []
+}
