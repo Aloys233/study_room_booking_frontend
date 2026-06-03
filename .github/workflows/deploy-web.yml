@@ -36,7 +36,7 @@ jobs:
         run: flutter test
 
       - name: Build web
-        run: flutter build web --release --base-href / --dart-define=API_BASE_URL=http://srbb.komira.top
+        run: flutter build web --release --base-href / --dart-define=API_BASE_URL=https://srbb.komira.top
 
       - name: Configure custom domain
         run: echo "roombooking.komira.top" > build/web/CNAME
