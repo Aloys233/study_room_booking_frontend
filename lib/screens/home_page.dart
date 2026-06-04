@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../models/auth_models.dart';
@@ -1398,6 +1399,16 @@ class _ProfilePanel extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
+              if (kDebugMode) ...[
+                OutlinedButton.icon(
+                  onPressed: () {
+                    throw StateError('This is test exception');
+                  },
+                  icon: const Icon(Icons.bug_report_rounded),
+                  label: const Text('Verify Sentry Setup'),
+                ),
+                const SizedBox(height: 8),
+              ],
               OutlinedButton.icon(
                 onPressed: onLogout,
                 icon: const Icon(Icons.logout_rounded),

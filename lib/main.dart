@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'models/auth_models.dart';
 import 'screens/auth_page.dart';
@@ -8,8 +10,19 @@ import 'screens/password_reset_page.dart';
 import 'services/auth_api.dart';
 import 'services/auth_session_store.dart';
 
-void main() {
-  runApp(const StudyRoomBookingApp());
+const _sentryDsn = String.fromEnvironment(
+  'SENTRY_DSN',
+  defaultValue:
+      'https://51fa6fcee0c91a0c535ca34a99737998@o4511504349396992.ingest.us.sentry.io/4511505048666112',
+);
+
+Future<void> main() async {
+  await SentryFlutter.init((options) {
+    options.dsn = _sentryDsn;
+    options.environment = kReleaseMode ? 'production' : 'development';
+    options.tracesSampleRate = 1.0;
+    options.debug = !kReleaseMode;
+  }, appRunner: () => runApp(SentryWidget(child: const StudyRoomBookingApp())));
 }
 
 typedef AuthApiFactory = AuthApi Function({String? accessToken});
@@ -153,14 +166,8 @@ class _StudyRoomBookingAppState extends State<StudyRoomBookingApp> {
           : _restoringSession
           ? const _SessionRestorePage()
           : _session == null
-          ? AuthPage(
-              authApi: _authApi,
-              onAuthenticated: _setSession,
-            )
-          : HomePage(
-              session: _session!,
-              onLogout: () => _setSession(null),
-            ),
+          ? AuthPage(authApi: _authApi, onAuthenticated: _setSession)
+          : HomePage(session: _session!, onLogout: () => _setSession(null)),
     );
   }
 
@@ -202,8 +209,6 @@ class _SessionRestorePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
-    );
+    return const Scaffold(body: Center(child: CircularProgressIndicator()));
   }
 }
