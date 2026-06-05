@@ -53,7 +53,19 @@ class BookingApi {
         return SystemConfig.fromJson(data);
       }
     } on AuthApiException {
-      // 配置端点不可用（如后端未更新）时退回保守默认（仅当天），不阻断主流程。
+      // 配置端点不可用（如后端未更新）时退回保守默认，不阻断主流程。
+    }
+    return SystemConfig.fallback;
+  }
+
+  Future<SystemConfig> fetchReservationRules() async {
+    try {
+      final data = await _get('/api/reservations/rules');
+      if (data is Map<String, dynamic>) {
+        return SystemConfig.fromJson(data);
+      }
+    } on AuthApiException {
+      // 规则端点不可用（如后端未更新）时仅显示当天。
     }
     return SystemConfig.fallback;
   }

@@ -116,6 +116,33 @@ void main() {
   });
 
   test(
+    'reservation rules use the authenticated effective-rules path',
+    () async {
+      late http.BaseRequest captured;
+      final api = BookingApi(
+        accessToken: 'access-token',
+        baseUrl: 'http://api.test',
+        client: MockClient((request) async {
+          captured = request;
+          return http.Response(
+            jsonEncode({
+              'code': 0,
+              'data': {'allowAdvanceReservation': false, 'maxAdvanceDays': 0},
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }),
+      );
+
+      final rules = await api.fetchReservationRules();
+
+      expect(captured.url.path, '/api/reservations/rules');
+      expect(rules.effectiveAdvanceDays, 0);
+    },
+  );
+
+  test(
     'waiting queue request supports documented slotId and backend timeSlotId',
     () async {
       Map<String, dynamic>? payload;

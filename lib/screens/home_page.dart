@@ -46,6 +46,7 @@ class _HomePageState extends State<HomePage> {
   late UserProfile _currentUser;
   DateTime _selectedDate = _today();
   SystemConfig _systemConfig = SystemConfig.fallback;
+  SystemConfig _reservationRules = SystemConfig.fallback;
   bool _loading = true;
   bool _loadingSeats = false;
   bool _submitting = false;
@@ -115,6 +116,7 @@ class _HomePageState extends State<HomePage> {
         _bookingApi.fetchReservations(),
         _bookingApi.fetchWaitingQueues(),
         _bookingApi.fetchSystemConfig(),
+        _bookingApi.fetchReservationRules(),
         if (_isTeacher) _bookingApi.fetchRoomReservations(),
       ]);
       if (!mounted) return;
@@ -128,8 +130,9 @@ class _HomePageState extends State<HomePage> {
         _reservations = results[3] as List<ReservationSummary>;
         _waitingQueues = results[4] as List<WaitingQueueEntry>;
         _systemConfig = results[5] as SystemConfig;
+        _reservationRules = results[6] as SystemConfig;
         _roomReservations = _isTeacher
-            ? results[6] as List<RoomReservation>
+            ? results[7] as List<RoomReservation>
             : const [];
         _selectedDate = _today();
         _selectedRoom = _rooms.isEmpty ? null : _rooms.first;
@@ -175,7 +178,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   /// 最多可提前预约天数（0 表示仅当天）。
-  int get _maxAdvanceDays => _systemConfig.effectiveAdvanceDays;
+  int get _maxAdvanceDays => _reservationRules.effectiveAdvanceDays;
 
   /// 轻量刷新：只重拉列表与座位图，保留当前自习室/日期/时段选择。
   Future<void> _manualRefresh() async {
