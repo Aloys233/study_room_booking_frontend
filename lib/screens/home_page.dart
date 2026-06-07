@@ -9,10 +9,19 @@ import '../services/booking_api.dart';
 import '../widgets/app_notification.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, required this.session, required this.onLogout});
+  const HomePage({
+    super.key,
+    required this.session,
+    required this.onLogout,
+    AuthApi? authApi,
+    BookingApi? bookingApi,
+  }) : _authApi = authApi,
+       _bookingApi = bookingApi;
 
   final LoginSession session;
   final VoidCallback onLogout;
+  final AuthApi? _authApi;
+  final BookingApi? _bookingApi;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -86,8 +95,11 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    _authApi = AuthApi(accessToken: widget.session.accessToken);
-    _bookingApi = BookingApi(accessToken: widget.session.accessToken);
+    _authApi =
+        widget._authApi ?? AuthApi(accessToken: widget.session.accessToken);
+    _bookingApi =
+        widget._bookingApi ??
+        BookingApi(accessToken: widget.session.accessToken);
     _currentUser = widget.session.user;
     _emailController.text = widget.session.user.email ?? '';
     _loadInitialData();
@@ -262,10 +274,9 @@ class _HomePageState extends State<HomePage> {
         slotId: slot.id,
       );
       if (!mounted) return;
-      final availableSeats = seats.where((seat) => seat.isAvailable);
       setState(() {
         _seatMap = seats;
-        _selectedSeat = availableSeats.isEmpty ? null : availableSeats.first;
+        _selectedSeat = null;
       });
     } on AuthApiException catch (error) {
       if (!mounted) return;
