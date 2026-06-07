@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/auth_models.dart';
 import '../services/auth_api.dart';
+import '../widgets/app_notification.dart';
 import '../widgets/altcha_widget.dart';
 
 enum AuthMode { login, register }
@@ -75,7 +76,7 @@ class _AuthPageState extends State<AuthPage> {
           _confirmPasswordController.clear();
           _resetAltcha();
         });
-        _showMessage('注册成功，请查收邮箱完成验证');
+        _showMessage('请查收邮箱完成验证，验证后可返回登录', title: '注册成功');
       } else {
         final session = await widget.authApi.loginUser(
           loginName: _accountController.text.trim(),
@@ -117,10 +118,8 @@ class _AuthPageState extends State<AuthPage> {
     _altchaVersion++;
   }
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+  void _showMessage(String message, {String? title}) {
+    AppNotification.show(context, title: title, message: message);
   }
 
   Future<void> _showPasswordResetDialog() async {

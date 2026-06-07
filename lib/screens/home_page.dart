@@ -6,6 +6,7 @@ import '../models/booking_models.dart';
 import '../services/avatar_file_picker.dart';
 import '../services/auth_api.dart';
 import '../services/booking_api.dart';
+import '../widgets/app_notification.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.session, required this.onLogout});
@@ -655,9 +656,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _showMessage(String message) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+    AppNotification.show(context, message: message);
   }
 
   TimeSlot? _firstBookableSlotFor(
