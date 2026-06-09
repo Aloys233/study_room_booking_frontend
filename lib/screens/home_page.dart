@@ -1849,13 +1849,18 @@ class _ReservationComposer extends StatelessWidget {
           const SizedBox(height: 14),
           DropdownButtonFormField<TimeSlot>(
             initialValue: selectedSlot,
+            isExpanded: true,
+            itemHeight: null,
             items: timeSlots
                 .map(
                   (slot) => DropdownMenuItem(
                     value: slot,
-                    child: Text(slot.label, overflow: TextOverflow.ellipsis),
+                    child: _TimeSlotDropdownLabel(slot: slot),
                   ),
                 )
+                .toList(),
+            selectedItemBuilder: (context) => timeSlots
+                .map((slot) => _TimeSlotDropdownLabel(slot: slot, dense: true))
                 .toList(),
             onChanged: submitting ? null : onSlotChanged,
             decoration: const InputDecoration(
@@ -2366,6 +2371,44 @@ class _SeatLegend extends StatelessWidget {
   }
 }
 
+class _TimeSlotDropdownLabel extends StatelessWidget {
+  const _TimeSlotDropdownLabel({required this.slot, this.dense = false});
+
+  final TimeSlot slot;
+  final bool dense;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: dense ? 2 : 6),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            slot.slotName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '${slot.startTime}-${slot.endTime}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: const Color(0xFF6B6258),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _ReservationsPanel extends StatelessWidget {
   const _ReservationsPanel({
     required this.reservations,
@@ -2551,15 +2594,20 @@ class _RoomReservationPanel extends StatelessWidget {
                 const SizedBox(height: 12),
                 DropdownButtonFormField<TimeSlot>(
                   initialValue: selectedSlot,
+                  isExpanded: true,
+                  itemHeight: null,
                   items: timeSlots
                       .map(
                         (slot) => DropdownMenuItem(
                           value: slot,
-                          child: Text(
-                            slot.label,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          child: _TimeSlotDropdownLabel(slot: slot),
                         ),
+                      )
+                      .toList(),
+                  selectedItemBuilder: (context) => timeSlots
+                      .map(
+                        (slot) =>
+                            _TimeSlotDropdownLabel(slot: slot, dense: true),
                       )
                       .toList(),
                   onChanged: submitting ? null : onSlotChanged,
