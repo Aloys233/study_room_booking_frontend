@@ -1856,6 +1856,9 @@ class _ReservationComposer extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           DropdownButtonFormField<TimeSlot>(
+            key: ValueKey(
+              'seat-slot-${_dateText(selectedDate)}-${selectedSlot?.id ?? 'none'}-${timeSlots.length}',
+            ),
             initialValue: selectedSlot,
             isExpanded: true,
             itemHeight: null,
@@ -1873,6 +1876,7 @@ class _ReservationComposer extends StatelessWidget {
             onChanged: submitting ? null : onSlotChanged,
             decoration: const InputDecoration(
               labelText: '可预约时间段',
+              floatingLabelBehavior: FloatingLabelBehavior.always,
               prefixIcon: Icon(Icons.schedule_rounded),
             ),
           ),
@@ -2453,7 +2457,7 @@ class _ReservationsPanel extends StatelessWidget {
                   _ListLine(
                     title: '${item.roomName} · ${item.seatNo}',
                     subtitle:
-                        '${item.reserveDate} ${item.slotName ?? ''} · ${_reservationStatusText(item.status)}',
+                        '${_reservationScheduleText(item)} · ${_reservationStatusText(item.status)}',
                     trailing: Wrap(
                       spacing: 8,
                       children: [
@@ -2611,6 +2615,9 @@ class _RoomReservationPanel extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<TimeSlot>(
+                  key: ValueKey(
+                    'room-slot-${_dateText(selectedDate)}-${selectedSlot?.id ?? 'none'}-${timeSlots.length}',
+                  ),
                   initialValue: selectedSlot,
                   isExpanded: true,
                   itemHeight: null,
@@ -2628,6 +2635,7 @@ class _RoomReservationPanel extends StatelessWidget {
                   onChanged: submitting ? null : onSlotChanged,
                   decoration: const InputDecoration(
                     labelText: '整室预约时间段',
+                    floatingLabelBehavior: FloatingLabelBehavior.always,
                     prefixIcon: Icon(Icons.schedule_rounded),
                   ),
                 ),
@@ -3018,6 +3026,34 @@ String _reservationStatusText(String status) {
     'FINISHED' => '已完成',
     _ => status,
   };
+}
+
+String _reservationScheduleText(ReservationSummary item) {
+  final startTime = _extractClockText(item.reserveStartAt);
+  final endTime = _extractClockText(item.reserveEndAt);
+  if (startTime != null && endTime != null) {
+    return '${item.reserveDate} $startTime-$endTime';
+  }
+  if (startTime != null) {
+    return '${item.reserveDate} $startTime';
+  }
+  final slotName = item.slotName?.trim();
+  if (slotName != null && slotName.isNotEmpty) {
+    return '${item.reserveDate} $slotName';
+  }
+  return item.reserveDate;
+}
+
+String? _extractClockText(String? value) {
+  if (value == null) {
+    return null;
+  }
+  final match = RegExp(r'T(\d{2}:\d{2})').firstMatch(value);
+  if (match != null) {
+    return match.group(1);
+  }
+  final plainMatch = RegExp(r'^(\d{2}:\d{2})').firstMatch(value);
+  return plainMatch?.group(1);
 }
 
 String _waitingStatusText(String status) {
