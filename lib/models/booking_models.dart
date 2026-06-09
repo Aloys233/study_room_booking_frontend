@@ -287,6 +287,8 @@ class RoomReservation {
     required this.status,
     this.roomName,
     this.slotName,
+    this.startTime,
+    this.endTime,
     this.remark,
   });
 
@@ -297,6 +299,8 @@ class RoomReservation {
   final String reserveDate;
   final int slotId;
   final String? slotName;
+  final String? startTime;
+  final String? endTime;
   final String status;
   final String? remark;
 
@@ -309,6 +313,8 @@ class RoomReservation {
       reserveDate: json['reserveDate'] as String,
       slotId: _asInt(json['slotId']),
       slotName: json['slotName'] as String?,
+      startTime: json['startTime'] as String?,
+      endTime: json['endTime'] as String?,
       status: json['status'] as String,
       remark: json['remark'] as String?,
     );

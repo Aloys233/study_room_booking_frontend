@@ -2512,7 +2512,7 @@ class _WaitingPanel extends StatelessWidget {
                   _ListLine(
                     title: item.roomName ?? '自习室 #${item.roomId}',
                     subtitle:
-                        '${item.reserveDate} ${item.slotName ?? ''} · ${_waitingStatusText(item.status)}',
+                        '${_waitingScheduleText(item)} · ${_waitingStatusText(item.status)}',
                     trailing: item.status == 'WAITING'
                         ? Wrap(
                             spacing: 8,
@@ -2677,7 +2677,7 @@ class _RoomReservationPanel extends StatelessWidget {
               _ListLine(
                 title: item.roomName ?? '自习室 #${item.roomId}',
                 subtitle:
-                    '${item.reserveDate} ${item.slotName ?? ''} · ${_roomReservationStatusText(item.status)}',
+                    '${_roomReservationScheduleText(item)} · ${_roomReservationStatusText(item.status)}',
                 trailing: item.status == 'PENDING_APPROVAL'
                     ? IconButton(
                         tooltip: '取消整室预约',
@@ -3044,13 +3044,42 @@ String _reservationScheduleText(ReservationSummary item) {
   return item.reserveDate;
 }
 
+String _waitingScheduleText(WaitingQueueEntry item) {
+  final startTime = _extractClockText(item.startTime);
+  final endTime = _extractClockText(item.endTime);
+  if (startTime != null && endTime != null) {
+    return '${item.reserveDate} $startTime-$endTime';
+  }
+  final slotName = item.slotName?.trim();
+  if (slotName != null && slotName.isNotEmpty) {
+    return '${item.reserveDate} $slotName';
+  }
+  return item.reserveDate;
+}
+
+String _roomReservationScheduleText(RoomReservation item) {
+  final startTime = _extractClockText(item.startTime);
+  final endTime = _extractClockText(item.endTime);
+  if (startTime != null && endTime != null) {
+    return '${item.reserveDate} $startTime-$endTime';
+  }
+  final slotName = item.slotName?.trim();
+  if (slotName != null && slotName.isNotEmpty) {
+    return '${item.reserveDate} $slotName';
+  }
+  return item.reserveDate;
+}
+
 String? _extractClockText(String? value) {
   if (value == null) {
     return null;
   }
-  final match = RegExp(r'T(\d{2}:\d{2})').firstMatch(value);
-  if (match != null) {
-    return match.group(1);
+  final parsed = DateTime.tryParse(value);
+  if (parsed != null) {
+    final local = parsed.toLocal();
+    final hour = local.hour.toString().padLeft(2, '0');
+    final minute = local.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
   }
   final plainMatch = RegExp(r'^(\d{2}:\d{2})').firstMatch(value);
   return plainMatch?.group(1);
