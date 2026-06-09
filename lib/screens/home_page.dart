@@ -1868,7 +1868,7 @@ class _ReservationComposer extends StatelessWidget {
                 )
                 .toList(),
             selectedItemBuilder: (context) => timeSlots
-                .map((slot) => _TimeSlotDropdownLabel(slot: slot, dense: true))
+                .map((slot) => _TimeSlotSelectedLabel(slot: slot))
                 .toList(),
             onChanged: submitting ? null : onSlotChanged,
             decoration: const InputDecoration(
@@ -2380,16 +2380,15 @@ class _SeatLegend extends StatelessWidget {
 }
 
 class _TimeSlotDropdownLabel extends StatelessWidget {
-  const _TimeSlotDropdownLabel({required this.slot, this.dense = false});
+  const _TimeSlotDropdownLabel({required this.slot});
 
   final TimeSlot slot;
-  final bool dense;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: dense ? 2 : 6),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2414,6 +2413,17 @@ class _TimeSlotDropdownLabel extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _TimeSlotSelectedLabel extends StatelessWidget {
+  const _TimeSlotSelectedLabel({required this.slot});
+
+  final TimeSlot slot;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(slot.label, maxLines: 1, overflow: TextOverflow.ellipsis);
   }
 }
 
@@ -2613,10 +2623,7 @@ class _RoomReservationPanel extends StatelessWidget {
                       )
                       .toList(),
                   selectedItemBuilder: (context) => timeSlots
-                      .map(
-                        (slot) =>
-                            _TimeSlotDropdownLabel(slot: slot, dense: true),
-                      )
+                      .map((slot) => _TimeSlotSelectedLabel(slot: slot))
                       .toList(),
                   onChanged: submitting ? null : onSlotChanged,
                   decoration: const InputDecoration(
