@@ -278,6 +278,14 @@ class _HomePageState extends State<HomePage> {
         _seatMap = seats;
         _selectedSeat = null;
       });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _selectedSeat == null) {
+          return;
+        }
+        // Keep the initial state unselected even if a child widget
+        // unexpectedly emits a selection during the first paint.
+        setState(() => _selectedSeat = null);
+      });
     } on AuthApiException catch (error) {
       if (!mounted) return;
       _showMessage(error.message);
