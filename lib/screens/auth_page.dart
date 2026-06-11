@@ -12,11 +12,19 @@ class AuthPage extends StatefulWidget {
   const AuthPage({
     super.key,
     required this.authApi,
+    this.initialRememberedCredentials,
     required this.onAuthenticated,
   });
 
   final AuthApi authApi;
-  final ValueChanged<LoginSession> onAuthenticated;
+  final RememberedCredentials? initialRememberedCredentials;
+  final Future<void> Function(
+    LoginSession session,
+    String loginName,
+    String password,
+    bool rememberPassword,
+  )
+  onAuthenticated;
 
   @override
   State<AuthPage> createState() => _AuthPageState();
@@ -39,6 +47,7 @@ class _AuthPageState extends State<AuthPage> {
   AuthMode _mode = AuthMode.login;
   bool _obscurePassword = true;
   bool _submitting = false;
+  bool _rememberPassword = false;
   int _altchaVersion = 0;
   String _altchaPayload = '';
   bool _showRegisterCodeAltcha = false;
@@ -46,6 +55,17 @@ class _AuthPageState extends State<AuthPage> {
   int _registerCodeAltchaVersion = 0;
 
   bool get _isRegister => _mode == AuthMode.register;
+
+  @override
+  void initState() {
+    super.initState();
+    final remembered = widget.initialRememberedCredentials;
+    if (remembered != null) {
+      _accountController.text = remembered.loginName;
+      _passwordController.text = remembered.password;
+      _rememberPassword = true;
+    }
+  }
 
   @override
   void dispose() {
@@ -91,7 +111,12 @@ class _AuthPageState extends State<AuthPage> {
           altchaPayload: _altchaPayload,
         );
         if (!mounted) return;
-        widget.onAuthenticated(session);
+        await widget.onAuthenticated(
+          session,
+          _accountController.text.trim(),
+          _passwordController.text,
+          _rememberPassword,
+        );
       }
     } on AuthApiException catch (error) {
       if (!mounted) return;
@@ -243,6 +268,10 @@ class _AuthPageState extends State<AuthPage> {
       onCancelRegisterCodeAltcha: _cancelRegisterCodeAltcha,
       onSubmit: _submitting ? null : _submit,
       onForgotPassword: _openPasswordResetPage,
+      rememberPassword: _rememberPassword,
+      onRememberPasswordChanged: (value) {
+        setState(() => _rememberPassword = value);
+      },
     );
 
     return Scaffold(
@@ -454,6 +483,8 @@ class _AuthCard extends StatelessWidget {
     required this.onCancelRegisterCodeAltcha,
     required this.onSubmit,
     required this.onForgotPassword,
+    required this.rememberPassword,
+    required this.onRememberPasswordChanged,
   });
 
   final AuthMode mode;
@@ -481,6 +512,8 @@ class _AuthCard extends StatelessWidget {
   final VoidCallback onCancelRegisterCodeAltcha;
   final VoidCallback? onSubmit;
   final VoidCallback onForgotPassword;
+  final bool rememberPassword;
+  final ValueChanged<bool> onRememberPasswordChanged;
 
   bool get _isRegister => mode == AuthMode.register;
 
@@ -743,6 +776,35 @@ class _AuthCard extends StatelessWidget {
                     },
                   ),
                 SizedBox(height: isCompact ? 18 : 24),
+                if (!_isRegister) ...[
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: rememberPassword,
+                        onChanged: isSubmitting
+                            ? null
+                            : (value) =>
+                                  onRememberPasswordChanged(value ?? false),
+                      ),
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: isSubmitting
+                            ? null
+                            : () => onRememberPasswordChanged(
+                                !rememberPassword,
+                              ),
+                        child: const Text(
+                          '记住密码',
+                          style: TextStyle(
+                            color: Color(0xFF6F675A),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                ],
                 FilledButton.icon(
                   onPressed: _isRegister
                       ? onSubmit

@@ -49,6 +49,7 @@ class _StudyRoomBookingAppState extends State<StudyRoomBookingApp> {
   late final AuthSessionStore _sessionStore =
       widget._sessionStore ?? AuthSessionStore();
   LoginSession? _session;
+  RememberedCredentials? _rememberedCredentials;
   bool _restoringSession = true;
 
   @override
@@ -59,9 +60,16 @@ class _StudyRoomBookingAppState extends State<StudyRoomBookingApp> {
 
   Future<void> _restoreSession() async {
     try {
+      final rememberedCredentials =
+          await _sessionStore.loadRememberedCredentials();
       final storedSession = await _sessionStore.loadSession();
       if (storedSession == null) {
-        if (mounted) setState(() => _restoringSession = false);
+        if (mounted) {
+          setState(() {
+            _rememberedCredentials = rememberedCredentials;
+            _restoringSession = false;
+          });
+        }
         return;
       }
 
@@ -71,6 +79,7 @@ class _StudyRoomBookingAppState extends State<StudyRoomBookingApp> {
       final user = await authApi.getCurrentUser();
       if (!mounted) return;
       setState(() {
+        _rememberedCredentials = rememberedCredentials;
         _session = LoginSession(
           accessToken: storedSession.accessToken,
           user: user,
@@ -79,12 +88,40 @@ class _StudyRoomBookingAppState extends State<StudyRoomBookingApp> {
       });
     } catch (_) {
       await _sessionStore.clearSession();
+      final rememberedCredentials =
+          await _sessionStore.loadRememberedCredentials();
       if (mounted) {
         setState(() {
           _session = null;
+          _rememberedCredentials = rememberedCredentials;
           _restoringSession = false;
         });
       }
+    }
+  }
+
+  Future<void> _handleAuthenticated(
+    LoginSession session,
+    String loginName,
+    String password,
+    bool rememberPassword,
+  ) async {
+    await _setSession(session);
+    if (rememberPassword) {
+      final credentials = RememberedCredentials(
+        loginName: loginName,
+        password: password,
+      );
+      await _sessionStore.saveRememberedCredentials(credentials);
+      if (mounted) {
+        setState(() => _rememberedCredentials = credentials);
+      }
+      return;
+    }
+
+    await _sessionStore.clearRememberedCredentials();
+    if (mounted) {
+      setState(() => _rememberedCredentials = null);
     }
   }
 
@@ -150,7 +187,11 @@ class _StudyRoomBookingAppState extends State<StudyRoomBookingApp> {
       home: _restoringSession
           ? const _SessionRestorePage()
           : _session == null
-          ? AuthPage(authApi: _authApi, onAuthenticated: _setSession)
+          ? AuthPage(
+              authApi: _authApi,
+              initialRememberedCredentials: _rememberedCredentials,
+              onAuthenticated: _handleAuthenticated,
+            )
           : HomePage(session: _session!, onLogout: () => _setSession(null)),
     );
   }

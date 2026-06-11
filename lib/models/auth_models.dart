@@ -71,3 +71,27 @@ class LoginSession {
     return {'accessToken': accessToken, 'user': user.toJson()};
   }
 }
+
+class RememberedCredentials {
+  const RememberedCredentials({
+    required this.loginName,
+    required this.password,
+  });
+
+  final String loginName;
+  final String password;
+
+  factory RememberedCredentials.fromJson(Map<String, dynamic> json) {
+    return RememberedCredentials(
+      loginName: json['loginName'] as String,
+      password: json['password'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'loginName': loginName,
+      'password': password,
+    };
+  }
+}
