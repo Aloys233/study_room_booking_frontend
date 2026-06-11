@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../models/auth_models.dart';
 import '../models/booking_models.dart';
+import '../screens/seat_map_layout.dart';
 import '../services/avatar_file_picker.dart';
 import '../services/auth_api.dart';
 import '../services/booking_api.dart';
@@ -701,7 +702,9 @@ class _HomePageState extends State<HomePage> {
                             try {
                               await _authApi.verifyMyEmail(
                                 email: _emailActivationController.text.trim(),
-                                code: _emailVerificationCodeController.text.trim().toUpperCase(),
+                                code: _emailVerificationCodeController.text
+                                    .trim()
+                                    .toUpperCase(),
                               );
                               final user = await _authApi.getCurrentUser();
                               if (!mounted || !dialogContext.mounted) return;
@@ -2142,43 +2145,20 @@ class _SeatMapGrid extends StatelessWidget {
         const SizedBox(height: 12),
         LayoutBuilder(
           builder: (context, constraints) {
-            const gap = 8.0;
             final compact = MediaQuery.sizeOf(context).width < 430;
-            final columns = seats.fold<int>(
-              1,
-              (max, item) =>
-                  item.x + item.w > max ? (item.x + item.w).ceil() : max,
+            final metrics = computeSeatMapBoardMetrics(
+              seats: seats,
+              maxWidth: constraints.maxWidth,
+              compact: compact,
             );
-            final rows = seats.fold<int>(
-              1,
-              (max, item) =>
-                  item.y + item.h > max ? (item.y + item.h).ceil() : max,
-            );
-            final cellSize =
-                (compact
-                        ? 54.0
-                        : (constraints.maxWidth - gap * (columns - 1)) /
-                              columns)
-                    .clamp(48.0, 68.0)
-                    .toDouble();
-            final boardWidth = columns * cellSize + (columns - 1) * gap;
-            final boardHeight = rows * cellSize + (rows - 1) * gap;
-            final minViewportHeight = compact ? 260.0 : 320.0;
-            final maxViewportHeight = compact ? 380.0 : 520.0;
-            final viewportHeight = boardHeight < minViewportHeight
-                ? boardHeight
-                : boardHeight.clamp(minViewportHeight, maxViewportHeight);
-            final initialScale = (constraints.maxWidth / boardWidth)
-                .clamp(0.55, 1.0)
-                .toDouble();
 
             return _ZoomableSeatMapBoard(
-              viewportHeight: viewportHeight.toDouble(),
-              initialScale: initialScale,
-              boardWidth: boardWidth,
-              boardHeight: boardHeight,
-              cellSize: cellSize,
-              gap: gap,
+              viewportHeight: metrics.viewportHeight,
+              initialScale: metrics.initialScale,
+              boardWidth: metrics.boardWidth,
+              boardHeight: metrics.boardHeight,
+              cellSize: metrics.cellSize,
+              gap: 8,
               seats: seats,
               selectedSeat: selectedSeat,
               submitting: submitting,
