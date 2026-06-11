@@ -55,10 +55,7 @@ void main() {
       }),
     );
 
-    await api.requestPasswordReset(
-      email: 'a@b.test',
-      altchaPayload: 'payload',
-    );
+    await api.requestPasswordReset(email: 'a@b.test', altchaPayload: 'payload');
 
     expect(captured.url.path, '/api/auth/password-reset/request');
     expect(payload?['email'], 'a@b.test');
@@ -95,6 +92,36 @@ void main() {
     expect(payload?['code'], '123456');
     expect(payload?['newPassword'], 'password');
     expect(payload?['altchaPayload'], 'payload');
+  });
+
+  test('profile update sends current password with new password', () async {
+    late http.BaseRequest captured;
+    Map<String, dynamic>? payload;
+    final api = AuthApi(
+      accessToken: 'token',
+      baseUrl: 'http://api.test',
+      client: MockClient.streaming((request, bodyStream) async {
+        captured = request;
+        payload =
+            jsonDecode(await utf8.decodeStream(bodyStream))
+                as Map<String, dynamic>;
+        return http.StreamedResponse(
+          Stream.value(utf8.encode(jsonEncode({'code': 0, 'data': null}))),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    await api.updateProfile(
+      currentPassword: 'old-password',
+      password: 'new-password',
+    );
+
+    expect(captured.method, 'PUT');
+    expect(captured.url.path, '/api/auth/me/profile');
+    expect(payload?['currentPassword'], 'old-password');
+    expect(payload?['password'], 'new-password');
   });
 
   test('backend message field is surfaced for business failures', () async {

@@ -70,10 +70,7 @@ class AuthApi {
   }) async {
     await _post(
       '/api/auth/register/email-code',
-      body: {
-        'email': email,
-        'altchaPayload': altchaPayload,
-      },
+      body: {'email': email, 'altchaPayload': altchaPayload},
     );
   }
 
@@ -83,10 +80,7 @@ class AuthApi {
   }) async {
     await _post(
       '/api/auth/password-reset/request',
-      body: {
-        'email': email,
-        'altchaPayload': altchaPayload,
-      },
+      body: {'email': email, 'altchaPayload': altchaPayload},
     );
   }
 
@@ -112,13 +106,20 @@ class AuthApi {
     return UserProfile.fromJson(data as Map<String, dynamic>);
   }
 
-  Future<void> updateProfile({String? avatar, String? password}) async {
+  Future<void> updateProfile({
+    String? avatar,
+    String? password,
+    String? currentPassword,
+  }) async {
     final body = <String, String>{};
     if (avatar != null) {
       body['avatar'] = avatar;
     }
     if (password != null) {
       body['password'] = password;
+    }
+    if (currentPassword != null) {
+      body['currentPassword'] = currentPassword;
     }
     await _put('/api/auth/me/profile', body: body);
   }

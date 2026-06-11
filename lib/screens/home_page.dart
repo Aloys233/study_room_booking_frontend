@@ -38,8 +38,8 @@ class _HomePageState extends State<HomePage> {
   final _emailController = TextEditingController();
   final _emailActivationController = TextEditingController();
   final _emailVerificationCodeController = TextEditingController();
+  final _profileCurrentPasswordController = TextEditingController();
   final _profilePasswordController = TextEditingController();
-  final _profileConfirmPasswordController = TextEditingController();
   final _purposeController = TextEditingController();
   final _remarkController = TextEditingController();
 
@@ -118,8 +118,8 @@ class _HomePageState extends State<HomePage> {
     _emailController.dispose();
     _emailActivationController.dispose();
     _emailVerificationCodeController.dispose();
+    _profileCurrentPasswordController.dispose();
     _profilePasswordController.dispose();
-    _profileConfirmPasswordController.dispose();
     _purposeController.dispose();
     _remarkController.dispose();
     super.dispose();
@@ -420,9 +420,11 @@ class _HomePageState extends State<HomePage> {
     if (!_profileFormKey.currentState!.validate()) {
       return;
     }
+    final currentPassword = _profileCurrentPasswordController.text;
     final password = _profilePasswordController.text;
     await _runAction(() async {
       await _authApi.updateProfile(
+        currentPassword: password.isEmpty ? null : currentPassword,
         password: password.isEmpty ? null : password,
       );
       final user = await _authApi.getCurrentUser();
@@ -430,8 +432,8 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _currentUser = user;
         _emailController.text = user.email ?? '';
+        _profileCurrentPasswordController.clear();
         _profilePasswordController.clear();
-        _profileConfirmPasswordController.clear();
       });
       _scheduleEmailActivationDialog();
       _showMessage('个人信息已更新');
@@ -980,8 +982,8 @@ class _HomePageState extends State<HomePage> {
           formKey: _profileFormKey,
           user: _currentUser,
           emailController: _emailController,
+          currentPasswordController: _profileCurrentPasswordController,
           passwordController: _profilePasswordController,
-          confirmPasswordController: _profileConfirmPasswordController,
           submitting: _submitting,
           uploadingAvatar: _uploadingAvatar,
           onAvatarTap: _changeAvatar,
@@ -1395,8 +1397,8 @@ class _ProfilePanel extends StatelessWidget {
     required this.formKey,
     required this.user,
     required this.emailController,
+    required this.currentPasswordController,
     required this.passwordController,
-    required this.confirmPasswordController,
     required this.submitting,
     required this.uploadingAvatar,
     required this.onAvatarTap,
@@ -1408,8 +1410,8 @@ class _ProfilePanel extends StatelessWidget {
   final GlobalKey<FormState> formKey;
   final UserProfile user;
   final TextEditingController emailController;
+  final TextEditingController currentPasswordController;
   final TextEditingController passwordController;
-  final TextEditingController confirmPasswordController;
   final bool submitting;
   final bool uploadingAvatar;
   final VoidCallback onAvatarTap;
@@ -1538,6 +1540,21 @@ class _ProfilePanel extends StatelessWidget {
                 ],
                 const SizedBox(height: 12),
                 TextFormField(
+                  controller: currentPasswordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(
+                    labelText: '原密码',
+                    prefixIcon: Icon(Icons.lock_clock_rounded),
+                  ),
+                  validator: (value) {
+                    if (passwordController.text.isEmpty) {
+                      return null;
+                    }
+                    return value == null || value.isEmpty ? '请输入原密码' : null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                TextFormField(
                   controller: passwordController,
                   obscureText: true,
                   decoration: const InputDecoration(
@@ -1546,24 +1563,14 @@ class _ProfilePanel extends StatelessWidget {
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
-                      return null;
+                      return currentPasswordController.text.isEmpty
+                          ? null
+                          : '请输入新密码';
+                    }
+                    if (currentPasswordController.text.isEmpty) {
+                      return '请输入原密码';
                     }
                     return value.length < 6 ? '密码至少 6 位' : null;
-                  },
-                ),
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: confirmPasswordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: '确认新密码',
-                    prefixIcon: Icon(Icons.lock_reset_rounded),
-                  ),
-                  validator: (value) {
-                    if (passwordController.text.isEmpty) {
-                      return null;
-                    }
-                    return value == passwordController.text ? null : '两次密码不一致';
                   },
                 ),
                 const SizedBox(height: 16),
