@@ -41,6 +41,9 @@ class _AuthPageState extends State<AuthPage> {
   bool _submitting = false;
   int _altchaVersion = 0;
   String _altchaPayload = '';
+  bool _showRegisterCodeAltcha = false;
+  bool _sendingRegisterCode = false;
+  int _registerCodeAltchaVersion = 0;
 
   bool get _isRegister => _mode == AuthMode.register;
 
@@ -113,6 +116,10 @@ class _AuthPageState extends State<AuthPage> {
       _mode = mode;
       _formKey.currentState?.reset();
       _confirmPasswordController.clear();
+      _registerCodeController.clear();
+      _showRegisterCodeAltcha = false;
+      _sendingRegisterCode = false;
+      _registerCodeAltchaVersion++;
       _resetAltcha();
     });
   }
@@ -138,69 +145,55 @@ class _AuthPageState extends State<AuthPage> {
       _showMessage('请先输入正确的邮箱');
       return;
     }
-    final payload = await _showAltchaDialog(title: '验证后发送验证码');
-    if (!mounted || payload == null || payload.isEmpty) {
+    setState(() {
+      _showRegisterCodeAltcha = true;
+      _sendingRegisterCode = false;
+      _registerCodeAltchaVersion++;
+    });
+  }
+
+  Future<void> _submitRegisterVerificationCode(String payload) async {
+    final email = _accountController.text.trim();
+    if (payload.isEmpty || !_isValidEmail(email) || _sendingRegisterCode) {
       return;
     }
+    setState(() => _sendingRegisterCode = true);
     try {
       await widget.authApi.sendRegisterEmailCode(
         email: email,
         altchaPayload: payload,
       );
       if (!mounted) return;
+      setState(() {
+        _showRegisterCodeAltcha = false;
+        _sendingRegisterCode = false;
+      });
       _showMessage('验证码已发送，请查收邮箱');
     } on AuthApiException catch (error) {
-      if (mounted) _showMessage(error.message);
+      if (!mounted) return;
+      setState(() {
+        _sendingRegisterCode = false;
+        _registerCodeAltchaVersion++;
+      });
+      _showMessage(error.message);
     } catch (_) {
-      if (mounted) _showMessage('验证码发送失败，请稍后重试');
+      if (!mounted) return;
+      setState(() {
+        _sendingRegisterCode = false;
+        _registerCodeAltchaVersion++;
+      });
+      _showMessage('验证码发送失败，请稍后重试');
     }
   }
 
-  Future<String?> _showAltchaDialog({required String title}) async {
-    var payload = '';
-    return showDialog<String>(
-      context: context,
-      barrierDismissible: true,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: Text(title),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Text('请先完成人机验证，验证通过后发送邮箱验证码。'),
-                  const SizedBox(height: 16),
-                  Center(
-                    child: AltchaWidget(
-                      key: ValueKey('register-code-altcha-${DateTime.now().microsecondsSinceEpoch}'),
-                      challengeUrl: _altchaChallengeUrl,
-                      onPayloadChanged: (nextPayload) {
-                        setDialogState(() => payload = nextPayload);
-                      },
-                      onError: _showMessage,
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('取消'),
-                ),
-                FilledButton(
-                  onPressed: payload.isEmpty
-                      ? null
-                      : () => Navigator.of(dialogContext).pop(payload),
-                  child: const Text('发送验证码'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
+  void _cancelRegisterCodeAltcha() {
+    if (_sendingRegisterCode) {
+      return;
+    }
+    setState(() {
+      _showRegisterCodeAltcha = false;
+      _registerCodeAltchaVersion++;
+    });
   }
 
   Future<void> _openPasswordResetPage() async {
@@ -239,6 +232,15 @@ class _AuthPageState extends State<AuthPage> {
       },
       onAltchaError: _showMessage,
       onSendRegisterCode: _sendRegisterVerificationCode,
+      showRegisterCodeAltcha: _showRegisterCodeAltcha,
+      sendingRegisterCode: _sendingRegisterCode,
+      registerCodeAltchaKey: ValueKey(_registerCodeAltchaVersion),
+      onRegisterCodeAltchaPayloadChanged: (payload) {
+        if (payload.isNotEmpty) {
+          _submitRegisterVerificationCode(payload);
+        }
+      },
+      onCancelRegisterCodeAltcha: _cancelRegisterCodeAltcha,
       onSubmit: _submitting ? null : _submit,
       onForgotPassword: _openPasswordResetPage,
     );
@@ -445,6 +447,11 @@ class _AuthCard extends StatelessWidget {
     required this.onAltchaPayloadChanged,
     required this.onAltchaError,
     required this.onSendRegisterCode,
+    required this.showRegisterCodeAltcha,
+    required this.sendingRegisterCode,
+    required this.registerCodeAltchaKey,
+    required this.onRegisterCodeAltchaPayloadChanged,
+    required this.onCancelRegisterCodeAltcha,
     required this.onSubmit,
     required this.onForgotPassword,
   });
@@ -467,6 +474,11 @@ class _AuthCard extends StatelessWidget {
   final ValueChanged<String> onAltchaPayloadChanged;
   final ValueChanged<String> onAltchaError;
   final VoidCallback onSendRegisterCode;
+  final bool showRegisterCodeAltcha;
+  final bool sendingRegisterCode;
+  final Key registerCodeAltchaKey;
+  final ValueChanged<String> onRegisterCodeAltchaPayloadChanged;
+  final VoidCallback onCancelRegisterCodeAltcha;
   final VoidCallback? onSubmit;
   final VoidCallback onForgotPassword;
 
@@ -638,7 +650,9 @@ class _AuthCard extends StatelessWidget {
                             if (code.isEmpty) {
                               return '请输入邮箱验证码';
                             }
-                            if (!RegExp(r'^[A-Z0-9]{6}$').hasMatch(code.toUpperCase())) {
+                            if (!RegExp(
+                              r'^[A-Z0-9]{6}$',
+                            ).hasMatch(code.toUpperCase())) {
                               return '请输入 6 位数字或大写字母';
                             }
                             return null;
@@ -649,18 +663,68 @@ class _AuthCard extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
                         child: OutlinedButton(
-                          onPressed: isSubmitting ? null : onSendRegisterCode,
-                          child: const Text('发送验证码'),
+                          onPressed: isSubmitting || sendingRegisterCode
+                              ? null
+                              : onSendRegisterCode,
+                          child: Text(sendingRegisterCode ? '发送中' : '发送验证码'),
                         ),
                       ),
                     ],
                   ),
+                  if (showRegisterCodeAltcha) ...[
+                    const SizedBox(height: 12),
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFAF7F1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFE2DACB)),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const Text(
+                              '请先完成人机验证，验证通过后会自动发送邮箱验证码。',
+                              style: TextStyle(
+                                color: Color(0xFF6F675A),
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Center(
+                              child: AltchaWidget(
+                                key: registerCodeAltchaKey,
+                                challengeUrl: altchaChallengeUrl,
+                                onPayloadChanged:
+                                    onRegisterCodeAltchaPayloadChanged,
+                                onError: onAltchaError,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: sendingRegisterCode
+                                    ? null
+                                    : onCancelRegisterCodeAltcha,
+                                child: const Text('取消'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
                 const SizedBox(height: 18),
                 if (!_isRegister)
                   LayoutBuilder(
                     builder: (context, constraints) {
-                      final scale = (constraints.maxWidth / 300).clamp(0.0, 1.0);
+                      final scale = (constraints.maxWidth / 300).clamp(
+                        0.0,
+                        1.0,
+                      );
                       return Center(
                         child: SizedBox(
                           width: 300 * scale,
