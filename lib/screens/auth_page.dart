@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/auth_models.dart';
+import 'password_reset_page.dart';
 import '../services/auth_api.dart';
 import '../widgets/app_notification.dart';
 import '../widgets/altcha_widget.dart';
@@ -217,229 +218,12 @@ class _AuthPageState extends State<AuthPage> {
     }
   }
 
-  Future<void> _showPasswordResetDialog() async {
-    final formKey = GlobalKey<FormState>();
-    final accountController = TextEditingController(
-      text: _accountController.text.trim(),
+  Future<void> _openPasswordResetPage() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => PasswordResetPage(authApi: widget.authApi),
+      ),
     );
-    final emailController = TextEditingController();
-    final codeController = TextEditingController();
-    final passwordController = TextEditingController();
-    final confirmPasswordController = TextEditingController();
-    var resetAltchaPayload = '';
-    var resetAltchaVersion = 0;
-    var submitting = false;
-
-    try {
-      await showDialog<void>(
-        context: context,
-        builder: (dialogContext) {
-          return StatefulBuilder(
-            builder: (context, setDialogState) {
-              return AlertDialog(
-                title: const Text('找回密码'),
-                content: Form(
-                  key: formKey,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const Text('输入账号和绑定邮箱发送验证码，再填写验证码和新密码。'),
-                      const SizedBox(height: 14),
-                      TextFormField(
-                        controller: accountController,
-                        enabled: !submitting,
-                        decoration: const InputDecoration(
-                          labelText: '学号 / 工号 / 邮箱',
-                          prefixIcon: Icon(Icons.account_circle_rounded),
-                        ),
-                        validator: (value) {
-                          final text = value?.trim() ?? '';
-                          return text.isEmpty ? '请输入学号 / 工号 / 邮箱' : null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: emailController,
-                        enabled: !submitting,
-                        keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(
-                          labelText: '绑定邮箱',
-                          prefixIcon: Icon(Icons.email_rounded),
-                        ),
-                        validator: (value) {
-                          final email = value?.trim() ?? '';
-                          if (email.isEmpty) return '请输入绑定邮箱';
-                          if (!_isValidEmail(email)) {
-                            return '邮箱格式不正确';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: codeController,
-                        enabled: !submitting,
-                        keyboardType: TextInputType.visiblePassword,
-                        maxLength: 6,
-                        textCapitalization: TextCapitalization.characters,
-                        decoration: const InputDecoration(
-                          labelText: '验证码',
-                          prefixIcon: Icon(Icons.password_rounded),
-                          counterText: '',
-                        ),
-                        validator: (value) {
-                          final code = value?.trim() ?? '';
-                          if (code.isEmpty) return '请输入验证码';
-                          if (!_isValidVerificationCode(code)) {
-                            return '请输入 6 位数字或大写字母';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: passwordController,
-                        enabled: !submitting,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: '新密码',
-                          prefixIcon: Icon(Icons.lock_rounded),
-                        ),
-                        validator: (value) {
-                          final text = value ?? '';
-                          if (text.isEmpty) return '请输入新密码';
-                          if (text.length < 6) return '密码至少 6 位';
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: confirmPasswordController,
-                        enabled: !submitting,
-                        obscureText: true,
-                        decoration: const InputDecoration(
-                          labelText: '确认新密码',
-                          prefixIcon: Icon(Icons.verified_user_rounded),
-                        ),
-                        validator: (value) {
-                          return value == passwordController.text
-                              ? null
-                              : '两次输入的密码不一致';
-                        },
-                      ),
-                      const SizedBox(height: 16),
-                      Center(
-                        child: AltchaWidget(
-                          key: ValueKey('password-reset-altcha-$resetAltchaVersion'),
-                          challengeUrl: _altchaChallengeUrl,
-                          onPayloadChanged: (payload) {
-                            setDialogState(() => resetAltchaPayload = payload);
-                          },
-                          onError: _showMessage,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: submitting
-                        ? null
-                        : () => Navigator.of(dialogContext).pop(),
-                    child: const Text('取消'),
-                  ),
-                  FilledButton.icon(
-                    onPressed: submitting
-                        ? null
-                        : () async {
-                            if (resetAltchaPayload.isEmpty) {
-                              _showMessage('请先完成人机验证');
-                              return;
-                            }
-                            setDialogState(() => submitting = true);
-                            try {
-                              await widget.authApi.requestPasswordReset(
-                                userNo: accountController.text.trim(),
-                                email: emailController.text.trim(),
-                                altchaPayload: resetAltchaPayload,
-                              );
-                              if (mounted) {
-                                _showMessage('如果账号和邮箱匹配，系统会发送验证码');
-                              }
-                            } on AuthApiException catch (error) {
-                              if (mounted) _showMessage(error.message);
-                            } catch (_) {
-                              if (mounted) _showMessage('密码找回请求失败，请稍后重试');
-                            } finally {
-                              if (dialogContext.mounted) {
-                                setDialogState(() {
-                                  submitting = false;
-                                  resetAltchaPayload = '';
-                                  resetAltchaVersion++;
-                                });
-                              }
-                            }
-                          },
-                    icon: submitting
-                        ? const SizedBox.square(
-                            dimension: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.mark_email_read_rounded),
-                    label: const Text('发送验证码'),
-                  ),
-                  FilledButton.icon(
-                    onPressed: submitting
-                        ? null
-                        : () async {
-                            if (!formKey.currentState!.validate()) return;
-                            if (resetAltchaPayload.isEmpty) {
-                              _showMessage('请先完成人机验证');
-                              return;
-                            }
-                            setDialogState(() => submitting = true);
-                            try {
-                              await widget.authApi.confirmPasswordReset(
-                                userNo: accountController.text.trim(),
-                                email: emailController.text.trim(),
-                                code: codeController.text.trim().toUpperCase(),
-                                newPassword: passwordController.text,
-                                altchaPayload: resetAltchaPayload,
-                              );
-                              if (!mounted || !dialogContext.mounted) return;
-                              Navigator.of(dialogContext).pop();
-                              _showMessage('密码已重置，请使用新密码登录');
-                            } on AuthApiException catch (error) {
-                              if (mounted) _showMessage(error.message);
-                            } catch (_) {
-                              if (mounted) _showMessage('密码重置失败，请稍后重试');
-                            } finally {
-                              if (dialogContext.mounted) {
-                                setDialogState(() {
-                                  submitting = false;
-                                  resetAltchaPayload = '';
-                                  resetAltchaVersion++;
-                                });
-                              }
-                            }
-                          },
-                    icon: const Icon(Icons.check_circle_rounded),
-                    label: const Text('重置密码'),
-                  ),
-                ],
-              );
-            },
-          );
-        },
-      );
-    } finally {
-      accountController.dispose();
-      emailController.dispose();
-      codeController.dispose();
-      passwordController.dispose();
-      confirmPasswordController.dispose();
-    }
   }
 
   @override
@@ -469,7 +253,7 @@ class _AuthPageState extends State<AuthPage> {
       },
       onAltchaError: _showMessage,
       onSubmit: _submitting ? null : _submit,
-      onForgotPassword: _showPasswordResetDialog,
+      onForgotPassword: _openPasswordResetPage,
     );
 
     return Scaffold(

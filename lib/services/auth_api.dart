@@ -65,14 +65,12 @@ class AuthApi {
   }
 
   Future<void> requestPasswordReset({
-    required String userNo,
     required String email,
     required String altchaPayload,
   }) async {
     await _post(
       '/api/auth/password-reset/request',
       body: {
-        'userNo': userNo,
         'email': email,
         'altchaPayload': altchaPayload,
       },
@@ -80,7 +78,6 @@ class AuthApi {
   }
 
   Future<void> confirmPasswordReset({
-    required String userNo,
     required String email,
     required String code,
     required String newPassword,
@@ -89,7 +86,6 @@ class AuthApi {
     await _post(
       '/api/auth/password-reset/confirm',
       body: {
-        'userNo': userNo,
         'email': email,
         'code': code,
         'newPassword': newPassword,

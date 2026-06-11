@@ -56,13 +56,11 @@ void main() {
     );
 
     await api.requestPasswordReset(
-      userNo: '2024001',
       email: 'a@b.test',
       altchaPayload: 'payload',
     );
 
     expect(captured.url.path, '/api/auth/password-reset/request');
-    expect(payload?['userNo'], '2024001');
     expect(payload?['email'], 'a@b.test');
     expect(payload?['altchaPayload'], 'payload');
   });
@@ -86,7 +84,6 @@ void main() {
     );
 
     await api.confirmPasswordReset(
-      userNo: '2024001',
       email: 'a@b.test',
       code: '123456',
       newPassword: 'password',
@@ -94,7 +91,6 @@ void main() {
     );
 
     expect(captured.url.path, '/api/auth/password-reset/confirm');
-    expect(payload?['userNo'], '2024001');
     expect(payload?['email'], 'a@b.test');
     expect(payload?['code'], '123456');
     expect(payload?['newPassword'], 'password');
