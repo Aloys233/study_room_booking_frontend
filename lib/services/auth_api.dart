@@ -50,7 +50,7 @@ class AuthApi {
     required String email,
     required String realName,
     required String password,
-    required String altchaPayload,
+    required String code,
   }) async {
     await _post(
       '/api/auth/register',
@@ -59,6 +59,19 @@ class AuthApi {
         'email': email,
         'realName': realName,
         'password': password,
+        'code': code,
+      },
+    );
+  }
+
+  Future<void> sendRegisterEmailCode({
+    required String email,
+    required String altchaPayload,
+  }) async {
+    await _post(
+      '/api/auth/register/email-code',
+      body: {
+        'email': email,
         'altchaPayload': altchaPayload,
       },
     );

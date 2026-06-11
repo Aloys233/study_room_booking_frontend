@@ -59,7 +59,7 @@ class _AuthPageState extends State<AuthPage> {
     if (form == null || !form.validate()) {
       return;
     }
-    if (_altchaPayload.isEmpty) {
+    if (!_isRegister && _altchaPayload.isEmpty) {
       _showMessage('请先完成人机验证');
       return;
     }
@@ -71,10 +71,16 @@ class _AuthPageState extends State<AuthPage> {
           email: _accountController.text.trim(),
           realName: _nameController.text.trim(),
           password: _passwordController.text,
-          altchaPayload: _altchaPayload,
+          code: _registerCodeController.text.trim().toUpperCase(),
         );
         if (!mounted) return;
-        await _showRegisterVerificationDialog(_accountController.text.trim());
+        setState(() {
+          _mode = AuthMode.login;
+          _confirmPasswordController.clear();
+          _registerCodeController.clear();
+          _resetAltcha();
+        });
+        _showMessage('注册成功，请直接登录', title: '注册成功');
       } else {
         final session = await widget.authApi.loginUser(
           loginName: _accountController.text.trim(),
@@ -126,96 +132,75 @@ class _AuthPageState extends State<AuthPage> {
         !email.endsWith('@');
   }
 
-  bool _isValidVerificationCode(String code) {
-    final normalized = code.trim().toUpperCase();
-    final pattern = RegExp(r'^[A-Z0-9]{6}$');
-    return pattern.hasMatch(normalized);
+  Future<void> _sendRegisterVerificationCode() async {
+    final email = _accountController.text.trim();
+    if (!_isValidEmail(email)) {
+      _showMessage('请先输入正确的邮箱');
+      return;
+    }
+    final payload = await _showAltchaDialog(title: '验证后发送验证码');
+    if (!mounted || payload == null || payload.isEmpty) {
+      return;
+    }
+    try {
+      await widget.authApi.sendRegisterEmailCode(
+        email: email,
+        altchaPayload: payload,
+      );
+      if (!mounted) return;
+      _showMessage('验证码已发送，请查收邮箱');
+    } on AuthApiException catch (error) {
+      if (mounted) _showMessage(error.message);
+    } catch (_) {
+      if (mounted) _showMessage('验证码发送失败，请稍后重试');
+    }
   }
 
-  Future<void> _showRegisterVerificationDialog(String email) async {
-    _registerCodeController.clear();
-    var submitting = false;
-    try {
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) {
-          return StatefulBuilder(
-            builder: (context, setDialogState) {
-              return AlertDialog(
-                title: const Text('输入邮箱验证码'),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text('验证码已发送到 $email，请输入 6 位数字或大写字母完成注册验证。'),
-                    const SizedBox(height: 14),
-                    TextField(
-                      controller: _registerCodeController,
-                      enabled: !submitting,
-                      keyboardType: TextInputType.visiblePassword,
-                      maxLength: 6,
-                      textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(
-                        labelText: '验证码',
-                        prefixIcon: Icon(Icons.verified_rounded),
-                        counterText: '',
-                      ),
+  Future<String?> _showAltchaDialog({required String title}) async {
+    var payload = '';
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text(title),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text('请先完成人机验证，验证通过后发送邮箱验证码。'),
+                  const SizedBox(height: 16),
+                  Center(
+                    child: AltchaWidget(
+                      key: ValueKey('register-code-altcha-${DateTime.now().microsecondsSinceEpoch}'),
+                      challengeUrl: _altchaChallengeUrl,
+                      onPayloadChanged: (nextPayload) {
+                        setDialogState(() => payload = nextPayload);
+                      },
+                      onError: _showMessage,
                     ),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: submitting
-                        ? null
-                        : () {
-                            Navigator.of(dialogContext).pop();
-                            setState(() {
-                              _mode = AuthMode.login;
-                              _confirmPasswordController.clear();
-                              _resetAltcha();
-                            });
-                            _showMessage('稍后可登录后继续完成邮箱验证');
-                          },
-                    child: const Text('稍后验证'),
-                  ),
-                  FilledButton(
-                    onPressed: submitting
-                        ? null
-                        : () async {
-                            setDialogState(() => submitting = true);
-                            try {
-                              await widget.authApi.verifyEmail(
-                                email: email,
-                                code: _registerCodeController.text.trim().toUpperCase(),
-                              );
-                              if (!mounted || !dialogContext.mounted) return;
-                              Navigator.of(dialogContext).pop();
-                              setState(() {
-                                _mode = AuthMode.login;
-                                _confirmPasswordController.clear();
-                                _resetAltcha();
-                              });
-                              _showMessage('邮箱验证完成，请登录', title: '注册成功');
-                            } on AuthApiException catch (_) {
-                              if (mounted) _showMessage('邮箱验证失败，请检查验证码');
-                            } finally {
-                              if (dialogContext.mounted) {
-                                setDialogState(() => submitting = false);
-                              }
-                            }
-                          },
-                    child: const Text('立即验证'),
                   ),
                 ],
-              );
-            },
-          );
-        },
-      );
-    } finally {
-      _registerCodeController.clear();
-    }
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('取消'),
+                ),
+                FilledButton(
+                  onPressed: payload.isEmpty
+                      ? null
+                      : () => Navigator.of(dialogContext).pop(payload),
+                  child: const Text('发送验证码'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _openPasswordResetPage() async {
@@ -241,6 +226,7 @@ class _AuthPageState extends State<AuthPage> {
       nameController: _nameController,
       passwordController: _passwordController,
       confirmPasswordController: _confirmPasswordController,
+      registerCodeController: _registerCodeController,
       onModeChanged: _switchMode,
       onObscurePasswordChanged: () {
         setState(() => _obscurePassword = !_obscurePassword);
@@ -252,6 +238,7 @@ class _AuthPageState extends State<AuthPage> {
         setState(() => _altchaPayload = payload);
       },
       onAltchaError: _showMessage,
+      onSendRegisterCode: _sendRegisterVerificationCode,
       onSubmit: _submitting ? null : _submit,
       onForgotPassword: _openPasswordResetPage,
     );
@@ -449,6 +436,7 @@ class _AuthCard extends StatelessWidget {
     required this.nameController,
     required this.passwordController,
     required this.confirmPasswordController,
+    required this.registerCodeController,
     required this.onModeChanged,
     required this.onObscurePasswordChanged,
     required this.altchaChallengeUrl,
@@ -456,6 +444,7 @@ class _AuthCard extends StatelessWidget {
     required this.hasAltchaPayload,
     required this.onAltchaPayloadChanged,
     required this.onAltchaError,
+    required this.onSendRegisterCode,
     required this.onSubmit,
     required this.onForgotPassword,
   });
@@ -469,6 +458,7 @@ class _AuthCard extends StatelessWidget {
   final TextEditingController nameController;
   final TextEditingController passwordController;
   final TextEditingController confirmPasswordController;
+  final TextEditingController registerCodeController;
   final ValueChanged<AuthMode> onModeChanged;
   final VoidCallback onObscurePasswordChanged;
   final String altchaChallengeUrl;
@@ -476,6 +466,7 @@ class _AuthCard extends StatelessWidget {
   final bool hasAltchaPayload;
   final ValueChanged<String> onAltchaPayloadChanged;
   final ValueChanged<String> onAltchaError;
+  final VoidCallback onSendRegisterCode;
   final VoidCallback? onSubmit;
   final VoidCallback onForgotPassword;
 
@@ -627,31 +618,71 @@ class _AuthCard extends StatelessWidget {
                       return null;
                     },
                   ),
-                ],
-                const SizedBox(height: 18),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final scale = (constraints.maxWidth / 300).clamp(0.0, 1.0);
-                    return Center(
-                      child: SizedBox(
-                        width: 300 * scale,
-                        height: 80 * scale,
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: AltchaWidget(
-                            key: altchaKey,
-                            challengeUrl: altchaChallengeUrl,
-                            onPayloadChanged: onAltchaPayloadChanged,
-                            onError: onAltchaError,
+                  const SizedBox(height: 16),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: registerCodeController,
+                          keyboardType: TextInputType.visiblePassword,
+                          maxLength: 6,
+                          textCapitalization: TextCapitalization.characters,
+                          decoration: const InputDecoration(
+                            labelText: '邮箱验证码',
+                            prefixIcon: Icon(Icons.verified_rounded),
+                            counterText: '',
                           ),
+                          validator: (value) {
+                            final code = value?.trim() ?? '';
+                            if (code.isEmpty) {
+                              return '请输入邮箱验证码';
+                            }
+                            if (!RegExp(r'^[A-Z0-9]{6}$').hasMatch(code.toUpperCase())) {
+                              return '请输入 6 位数字或大写字母';
+                            }
+                            return null;
+                          },
                         ),
                       ),
-                    );
-                  },
-                ),
+                      const SizedBox(width: 12),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: OutlinedButton(
+                          onPressed: isSubmitting ? null : onSendRegisterCode,
+                          child: const Text('发送验证码'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 18),
+                if (!_isRegister)
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final scale = (constraints.maxWidth / 300).clamp(0.0, 1.0);
+                      return Center(
+                        child: SizedBox(
+                          width: 300 * scale,
+                          height: 80 * scale,
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: AltchaWidget(
+                              key: altchaKey,
+                              challengeUrl: altchaChallengeUrl,
+                              onPayloadChanged: onAltchaPayloadChanged,
+                              onError: onAltchaError,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
                 SizedBox(height: isCompact ? 18 : 24),
                 FilledButton.icon(
-                  onPressed: hasAltchaPayload ? onSubmit : null,
+                  onPressed: _isRegister
+                      ? onSubmit
+                      : (hasAltchaPayload ? onSubmit : null),
                   icon: isSubmitting
                       ? const SizedBox.square(
                           dimension: 18,

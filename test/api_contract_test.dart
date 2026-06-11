@@ -29,11 +29,11 @@ void main() {
       email: 'visitor@example.test',
       realName: '校外访客',
       password: 'password',
-      altchaPayload: 'payload',
+      code: 'ABC123',
     );
 
     expect(captured.url.path, '/api/auth/register');
-    expect(payload?['altchaPayload'], 'payload');
+    expect(payload?['code'], 'ABC123');
     expect(payload?.containsKey('turnstileToken'), isFalse);
   });
 
