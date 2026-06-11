@@ -1789,23 +1789,27 @@ class _DateChip extends StatelessWidget {
                   : const Color(0xFFE8DFCF),
             ),
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                top,
-                style: TextStyle(
-                  color: fg,
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  top,
+                  style: TextStyle(
+                    color: fg,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${date.month}/${date.day}',
-                style: TextStyle(color: fg, fontSize: 12),
-              ),
-            ],
+                const SizedBox(height: 4),
+                Text(
+                  '${date.month}/${date.day}',
+                  style: TextStyle(color: fg, fontSize: 12),
+                ),
+              ],
+            ),
           ),
         ),
       ),
