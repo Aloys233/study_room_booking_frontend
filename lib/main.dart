@@ -4,9 +4,7 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 
 import 'models/auth_models.dart';
 import 'screens/auth_page.dart';
-import 'screens/email_verification_page.dart';
 import 'screens/home_page.dart';
-import 'screens/password_reset_page.dart';
 import 'services/auth_api.dart';
 import 'services/auth_session_store.dart';
 
@@ -101,8 +99,6 @@ class _StudyRoomBookingAppState extends State<StudyRoomBookingApp> {
 
   @override
   Widget build(BuildContext context) {
-    final verificationToken = _emailVerificationToken();
-    final passwordResetToken = _passwordResetToken();
     return MaterialApp(
       title: '自习室预约',
       debugShowCheckedModeBanner: false,
@@ -151,56 +147,12 @@ class _StudyRoomBookingAppState extends State<StudyRoomBookingApp> {
           ),
         ),
       ),
-      home: verificationToken != null
-          ? EmailVerificationPage(
-              authApi: _authApi,
-              token: verificationToken,
-              onBackToLogin: () => _setSession(null),
-            )
-          : passwordResetToken != null
-          ? PasswordResetPage(
-              authApi: _authApi,
-              token: passwordResetToken,
-              onBackToLogin: () => _setSession(null),
-            )
-          : _restoringSession
+      home: _restoringSession
           ? const _SessionRestorePage()
           : _session == null
           ? AuthPage(authApi: _authApi, onAuthenticated: _setSession)
           : HomePage(session: _session!, onLogout: () => _setSession(null)),
     );
-  }
-
-  String? _emailVerificationToken() {
-    final uri = Uri.base;
-    if (uri.path.endsWith('/verify-email')) {
-      return uri.queryParameters['token'];
-    }
-    if (uri.fragment.isNotEmpty) {
-      final fragmentUri = Uri.parse(
-        uri.fragment.startsWith('/') ? uri.fragment : '/${uri.fragment}',
-      );
-      if (fragmentUri.path.endsWith('/verify-email')) {
-        return fragmentUri.queryParameters['token'];
-      }
-    }
-    return null;
-  }
-
-  String? _passwordResetToken() {
-    final uri = Uri.base;
-    if (uri.path.endsWith('/reset-password')) {
-      return uri.queryParameters['token'];
-    }
-    if (uri.fragment.isNotEmpty) {
-      final fragmentUri = Uri.parse(
-        uri.fragment.startsWith('/') ? uri.fragment : '/${uri.fragment}',
-      );
-      if (fragmentUri.path.endsWith('/reset-password')) {
-        return fragmentUri.queryParameters['token'];
-      }
-    }
-    return null;
   }
 }
 

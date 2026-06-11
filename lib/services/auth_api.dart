@@ -67,20 +67,34 @@ class AuthApi {
   Future<void> requestPasswordReset({
     required String userNo,
     required String email,
+    required String altchaPayload,
   }) async {
     await _post(
       '/api/auth/password-reset/request',
-      body: {'userNo': userNo, 'email': email},
+      body: {
+        'userNo': userNo,
+        'email': email,
+        'altchaPayload': altchaPayload,
+      },
     );
   }
 
   Future<void> confirmPasswordReset({
-    required String token,
+    required String userNo,
+    required String email,
+    required String code,
     required String newPassword,
+    required String altchaPayload,
   }) async {
     await _post(
       '/api/auth/password-reset/confirm',
-      body: {'token': token, 'newPassword': newPassword},
+      body: {
+        'userNo': userNo,
+        'email': email,
+        'code': code,
+        'newPassword': newPassword,
+        'altchaPayload': altchaPayload,
+      },
     );
   }
 
@@ -127,9 +141,20 @@ class AuthApi {
     );
   }
 
-  Future<void> verifyEmail({required String token}) async {
-    await _get(
-      '/api/auth/email/verify?token=${Uri.encodeQueryComponent(token)}',
+  Future<void> verifyEmail({
+    required String email,
+    required String code,
+  }) async {
+    await _post('/api/auth/email/verify', body: {'email': email, 'code': code});
+  }
+
+  Future<void> verifyMyEmail({
+    required String email,
+    required String code,
+  }) async {
+    await _post(
+      '/api/auth/me/email/verify',
+      body: {'email': email, 'code': code},
     );
   }
 

@@ -36,6 +36,7 @@ class _HomePageState extends State<HomePage> {
   final _profileFormKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _emailActivationController = TextEditingController();
+  final _emailVerificationCodeController = TextEditingController();
   final _profilePasswordController = TextEditingController();
   final _profileConfirmPasswordController = TextEditingController();
   final _purposeController = TextEditingController();
@@ -67,6 +68,12 @@ class _HomePageState extends State<HomePage> {
   String? _error;
 
   bool get _isTeacher => widget.session.user.role == 'TEACHER';
+
+  bool _isValidVerificationCode(String code) {
+    final normalized = code.trim().toUpperCase();
+    final pattern = RegExp(r'^[A-Z0-9]{6}$');
+    return pattern.hasMatch(normalized);
+  }
 
   List<_HomeDestination> get _destinations => [
     const _HomeDestination(
@@ -109,6 +116,7 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     _emailController.dispose();
     _emailActivationController.dispose();
+    _emailVerificationCodeController.dispose();
     _profilePasswordController.dispose();
     _profileConfirmPasswordController.dispose();
     _purposeController.dispose();
@@ -478,7 +486,7 @@ class _HomePageState extends State<HomePage> {
       final currentEmail = _currentUser.email?.trim() ?? '';
       if (email.toLowerCase() == currentEmail.toLowerCase()) {
         await _authApi.resendEmailVerification();
-        _showMessage('验证邮件已发送');
+        _showMessage('验证码已发送');
       } else {
         await _authApi.bindEmail(email: email);
         final user = await _authApi.getCurrentUser();
@@ -487,7 +495,7 @@ class _HomePageState extends State<HomePage> {
           _currentUser = user;
           _emailController.text = user.email ?? '';
         });
-        _showMessage('邮箱已修改，请完成验证');
+        _showMessage('邮箱已修改，请输入验证码完成验证');
       }
     });
   }
@@ -558,6 +566,7 @@ class _HomePageState extends State<HomePage> {
     _emailDialogOpen = true;
     final formKey = GlobalKey<FormState>();
     _emailActivationController.text = _currentUser.email ?? '';
+    _emailVerificationCodeController.clear();
     var submitting = false;
     try {
       await showDialog<void>(
@@ -579,8 +588,8 @@ class _HomePageState extends State<HomePage> {
                     children: [
                       Text(
                         hasEmail
-                            ? '验证邮件已发送到 ${_currentUser.email}，请点击邮件里的链接激活账号。'
-                            : '请先绑定邮箱，系统会发送验证邮件。完成验证前无法预约、候补或提交整室申请。',
+                            ? '验证码已发送到 ${_currentUser.email}，请输入 6 位数字或大写字母激活账号。'
+                            : '请先绑定邮箱，系统会发送验证码。完成验证前无法预约、候补或提交整室申请。',
                       ),
                       const SizedBox(height: 14),
                       TextFormField(
@@ -598,6 +607,27 @@ class _HomePageState extends State<HomePage> {
                               email.startsWith('@') ||
                               email.endsWith('@')) {
                             return '邮箱格式不正确';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: _emailVerificationCodeController,
+                        enabled: !submitting,
+                        keyboardType: TextInputType.visiblePassword,
+                        maxLength: 6,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: const InputDecoration(
+                          labelText: '验证码',
+                          prefixIcon: Icon(Icons.verified_rounded),
+                          counterText: '',
+                        ),
+                        validator: (value) {
+                          final code = value?.trim() ?? '';
+                          if (code.isEmpty) return '请输入验证码';
+                          if (!_isValidVerificationCode(code)) {
+                            return '请输入 6 位数字或大写字母';
                           }
                           return null;
                         },
@@ -643,11 +673,11 @@ class _HomePageState extends State<HomePage> {
                                 _currentUser = user;
                                 _emailController.text = user.email ?? '';
                               });
-                              _showMessage('验证邮件已发送');
+                              _showMessage('验证码已发送');
                             } on AuthApiException catch (error) {
                               if (mounted) _showMessage(error.message);
                             } catch (_) {
-                              if (mounted) _showMessage('验证邮件发送失败');
+                              if (mounted) _showMessage('验证码发送失败');
                             } finally {
                               if (mounted) {
                                 setDialogState(() => submitting = false);
@@ -660,7 +690,39 @@ class _HomePageState extends State<HomePage> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.mark_email_read_rounded),
-                    label: Text(hasEmail ? '重发验证邮件' : '发送验证邮件'),
+                    label: Text(hasEmail ? '重发验证码' : '发送验证码'),
+                  ),
+                  FilledButton.icon(
+                    onPressed: submitting
+                        ? null
+                        : () async {
+                            if (!formKey.currentState!.validate()) return;
+                            setDialogState(() => submitting = true);
+                            try {
+                              await _authApi.verifyMyEmail(
+                                email: _emailActivationController.text.trim(),
+                                code: _emailVerificationCodeController.text.trim().toUpperCase(),
+                              );
+                              final user = await _authApi.getCurrentUser();
+                              if (!mounted || !dialogContext.mounted) return;
+                              setState(() {
+                                _currentUser = user;
+                                _emailController.text = user.email ?? '';
+                              });
+                              Navigator.of(dialogContext).pop();
+                              _showMessage('邮箱已验证');
+                            } on AuthApiException catch (error) {
+                              if (mounted) _showMessage(error.message);
+                            } catch (_) {
+                              if (mounted) _showMessage('邮箱验证失败');
+                            } finally {
+                              if (mounted) {
+                                setDialogState(() => submitting = false);
+                              }
+                            }
+                          },
+                    icon: const Icon(Icons.check_circle_rounded),
+                    label: const Text('确认验证'),
                   ),
                 ],
               );

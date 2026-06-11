@@ -55,11 +55,16 @@ void main() {
       }),
     );
 
-    await api.requestPasswordReset(userNo: '2024001', email: 'a@b.test');
+    await api.requestPasswordReset(
+      userNo: '2024001',
+      email: 'a@b.test',
+      altchaPayload: 'payload',
+    );
 
     expect(captured.url.path, '/api/auth/password-reset/request');
     expect(payload?['userNo'], '2024001');
     expect(payload?['email'], 'a@b.test');
+    expect(payload?['altchaPayload'], 'payload');
   });
 
   test('password reset confirm uses documented auth path', () async {
@@ -80,11 +85,20 @@ void main() {
       }),
     );
 
-    await api.confirmPasswordReset(token: 'token', newPassword: 'password');
+    await api.confirmPasswordReset(
+      userNo: '2024001',
+      email: 'a@b.test',
+      code: '123456',
+      newPassword: 'password',
+      altchaPayload: 'payload',
+    );
 
     expect(captured.url.path, '/api/auth/password-reset/confirm');
-    expect(payload?['token'], 'token');
+    expect(payload?['userNo'], '2024001');
+    expect(payload?['email'], 'a@b.test');
+    expect(payload?['code'], '123456');
     expect(payload?['newPassword'], 'password');
+    expect(payload?['altchaPayload'], 'payload');
   });
 
   test('backend message field is surfaced for business failures', () async {
