@@ -2258,7 +2258,7 @@ class _ZoomableSeatMapBoardState extends State<_ZoomableSeatMapBoard> {
             constrained: false,
             alignment: Alignment.topLeft,
             boundaryMargin: const EdgeInsets.all(96),
-            minScale: 0.45,
+            minScale: widget.initialScale,
             maxScale: 3,
             transformationController: _controller,
             child: Padding(

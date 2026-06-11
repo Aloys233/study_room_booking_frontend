@@ -6,6 +6,7 @@ import 'package:study_room_booking_frontend/main.dart';
 import 'package:study_room_booking_frontend/models/auth_models.dart';
 import 'package:study_room_booking_frontend/models/booking_models.dart';
 import 'package:study_room_booking_frontend/screens/home_page.dart';
+import 'package:study_room_booking_frontend/screens/seat_map_layout.dart';
 import 'package:study_room_booking_frontend/services/auth_api.dart';
 import 'package:study_room_booking_frontend/services/booking_api.dart';
 
@@ -50,6 +51,62 @@ void main() {
       find.widgetWithText(FilledButton, '提交预约'),
     );
     expect(submitButton.onPressed, isNull);
+  });
+
+  testWidgets('seat map does not allow zooming out below fitted scale', (
+    WidgetTester tester,
+  ) async {
+    final user = _studentUser();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HomePage(
+          session: LoginSession(accessToken: 'token', user: user),
+          onLogout: () {},
+          authApi: _FakeAuthApi(user),
+          bookingApi: _FakeBookingApi(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final interactiveViewer = tester.widget<InteractiveViewer>(
+      find.byType(InteractiveViewer),
+    );
+    final expectedMetrics = computeSeatMapBoardMetrics(
+      seats: const [
+        SeatMapItem(
+          id: 11,
+          roomId: 1,
+          seatNo: 'A1',
+          tags: [],
+          status: 'NORMAL',
+          displayStatus: 'AVAILABLE',
+          type: 'SEAT',
+          x: 0,
+          y: 0,
+          w: 1,
+          h: 1,
+        ),
+        SeatMapItem(
+          id: 12,
+          roomId: 1,
+          seatNo: 'A2',
+          tags: [],
+          status: 'NORMAL',
+          displayStatus: 'AVAILABLE',
+          type: 'SEAT',
+          x: 1,
+          y: 0,
+          w: 1,
+          h: 1,
+        ),
+      ],
+      maxWidth: tester.getSize(find.byType(InteractiveViewer)).width,
+      compact: false,
+    );
+
+    expect(interactiveViewer.minScale, expectedMetrics.initialScale);
   });
 }
 
